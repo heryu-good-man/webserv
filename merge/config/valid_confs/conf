@@ -1,0 +1,15 @@
+server 
+{
+	listen 8080 localhost1
+	server_name
+}
+
+server
+{
+
+}
+
+server
+{
+
+}

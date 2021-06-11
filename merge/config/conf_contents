@@ -1,0 +1,52 @@
+config file
+
+올바른 키 값
+servers {
+	listen portnumber hostname;
+	server_name servername;
+	error_page error_page;
+
+	locations /path {
+		method GET POST DELETE;
+		root /www/var;
+		auto_index on;
+		index index.html;
+		cgi_extension php;
+		cgi_path_info /Users/tom/Downloads/cgi_tester;
+		return 301 http://google.com;
+		*upload_enable off;
+		#del#upload_dir : empty
+		client_body_size 500k;
+	}
+}
+
+생각하는 기본 값
+servers {
+	host : localhost
+	port : 8080
+	server_name : localhost
+	error_page : default page
+
+	locations{
+		methods : GET POST DELETE?
+		root    : defalut root
+		auto_index : off
+		index : empty
+		cgi_extension : empty
+		cgi_path_info : empty
+		return : empty
+		*upload_enable : off
+		#del#upload_dir : empty
+		*client_body_size : empty
+	}
+}
+
+
+1. 다른 포트로 멀티서버
+2. 다른 호스트로 멀티서버
+3. 에러 페이지
+4. 클라이언트 바디 사이즈
+5. location path or root
+6. index page
+7. method
+*8. redirect
