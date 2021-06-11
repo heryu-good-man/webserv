@@ -233,9 +233,8 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 
 void	Server::_checkWriteSet(std::vector<Socket>::iterator iter)
 {
-	// Request request(iter->getBuffer());
-	// request.parseRequest();
-	// std::cout << iter->getBuffer();
+	Request request(iter->getBuffer());
+	request.parseRequest();
 	std::cout << "write!!\n";
 	write(iter->getSocketFd(), iter->getBuffer().c_str(), iter->getBuffer().size() + 1);
 	iter->setReadChecker(false);

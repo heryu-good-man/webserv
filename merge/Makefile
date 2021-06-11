@@ -1,7 +1,7 @@
 NAME = server
 CLANG = clang++
 FLAG = -Wall -Wextra -Werror
-SANITIZE = -g3 -fsanitize=address
+# SANITIZE = -g3 -fsanitize=address
 INCLUDE = -I ./include
 SRCS = Frame.cpp	\
 	Server.cpp	\

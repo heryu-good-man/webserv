@@ -4,6 +4,8 @@ Request::Request(std::string message): _message(message) {}
 
 void Request::parseRequest()
 {
+	if (_message == "")
+		return ;
 	parseStartLine();
 	parseHeader();
 	parseBody();
@@ -26,10 +28,10 @@ void Request::parseStartLine()
 	}
 
 	// 출력해보기
-	std::cout << "Startline\n";
-	std::cout << "Method: " << _startLine[0] << std::endl;
-	std::cout << "Location: " << _startLine[1] << std::endl;
-	std::cout << "Vesrion: " << _startLine[2] << std::endl<< std::endl;
+	// std::cout << "Startline\n";
+	// std::cout << "Method: " << _startLine[0] << std::endl;
+	// std::cout << "Location: " << _startLine[1] << std::endl;
+	// std::cout << "Vesrion: " << _startLine[2] << std::endl<< std::endl;
 }
 
 void Request::parseHeader()
@@ -49,6 +51,8 @@ void Request::parseHeader()
 		posColon = headerLine.find(":");
 		// headerLine을 Key와 Value로 스플릿
 		headerKey = headerLine.substr(0, posColon);
+		if (headerLine[posColon + 1] == ' ')
+			posColon += 1;
 		headerValue = headerLine.substr(posColon + 1);
 		if (headerKey.size() != 0 && headerValue.size() != 0)
 			_headers.insert(std::pair<std::string, std::string>(headerKey, headerValue));
@@ -59,12 +63,23 @@ void Request::parseHeader()
 	// 출력해보기
 	std::cout << "headers\n";
 	for (std::map<std::string, std::string>::iterator it = _headers.begin(); it != _headers.end(); it++)
-		std::cout << it->first << ":" << it->second << std::endl;
+		std::cout << it->first << " : " << it->second << std::endl;
 	std::cout << std::endl;
 }
 
 void Request::parseBody()
 {
-	_body = _message;
-	std::cout << "Body: " << _body << std::endl;
+	if (_headers.find("content-length") == _headers.end())
+	{
+		_body = _message.substr(atoi(_headers["content-length"].c_str()));
+	}
+	else if (_headers.find("transfer-enconding") == _headers.end())
+	{
+
+	}
+	else
+	{
+		std::cout << "empty body\n";
+		return ;
+	}
 }
