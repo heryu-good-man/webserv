@@ -190,13 +190,16 @@ void	Server::checkSet(fd_set *readSet, fd_set *writeSet, fd_set *copyr, fd_set *
 {
 	// iterater 너무 길어!!!!!!!!
 	std::vector<Socket>::iterator iter = _sockets.begin();
-	std::vector<Socket>::iterator endIter = _sockets.end();
-	for (; iter != endIter; iter++)
+	// std::vector<Socket>::iterator endIter = _sockets.end();
+	for (; iter != _sockets.end(); iter++)
 	{
 		if (FD_ISSET(iter->getSocketFd(), copyr))
 		{
 			if (_checkReadSetAndExit(iter, readSet, writeSet))
+			{
+				_sockets.erase(iter--);
 				continue ;
+			}
 		}
 		// write하는 부분
 		// send버퍼를 사용할 수 있고 버퍼에 어떠한 문자가 있는지 확인해본다.
@@ -225,7 +228,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 		FD_CLR(iter->getSocketFd(), readSet);
 		FD_CLR(iter->getSocketFd(), writeSet);
 		close(iter->getSocketFd());
-		_sockets.erase(iter);
+		// _sockets.erase(iter);
 		return 1;
 	}
 }
