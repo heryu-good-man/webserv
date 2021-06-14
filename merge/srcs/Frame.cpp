@@ -27,14 +27,16 @@ int main(int argc, char** argv, char** envp)
 	// ServerManager manager;
 	// manager._fdManager[3] = server1;
 	std::vector<Server> servers = conf.getServers();
-	for (size_t i = 0; i < servers.size(); i++)
+	int serversSize = servers.size();
+	for (size_t i = 0; i < serversSize; i++)
 	{
 		std::cout << "PORT : " << servers[i]._port << std::endl;
 	}
 
 	int maxFd;
 	// 각 테스트 서버 bind, listen, setListenSocket readSet에다 넣기.
-	for (std::vector<Server>::iterator i = servers.begin(); i != servers.end(); i++)
+	std::vector<Server>::iterator endI = servers.end();
+	for (std::vector<Server>::iterator i = servers.begin(); i != endI; i++)
 	{
 		i->setListenSocket();
 		i->setAddress();

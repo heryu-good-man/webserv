@@ -205,7 +205,13 @@ void	Server::checkSet(fd_set *readSet, fd_set *writeSet, fd_set *copyr, fd_set *
 		// send버퍼를 사용할 수 있고 버퍼에 어떠한 문자가 있는지 확인해본다.
 		// 원래 따로 만드려고 했는데 (역할에 따라 함수를 분리하기 위해) 그러면 socket을 한번 더 돌아야 하기 때문에(비효율적) 합쳤다.
 		else if (FD_ISSET(iter->getSocketFd(), copyw) && iter->getReadChecker() == true)
-			_checkWriteSet(iter);
+		{
+			if (_checkWriteSet(iter, readSet, writeSet))
+			{
+				_sockets.erase(iter--);
+				continue ;
+			}
+		}
 	}
 }
 
@@ -215,6 +221,14 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 	int	n;
 	if ((n = read(iter->getSocketFd(), buff, sizeof(buff))) != 0)
 	{
+		if (n == -1)
+		{
+			// 소켓연결해제
+			FD_CLR(iter->getSocketFd(), readSet);
+			FD_CLR(iter->getSocketFd(), writeSet);
+			close(iter->getSocketFd());
+			return 1;
+		}
 		std::cout << "read!!\n";
 		buff[n] = '\0';
 		iter->addStringToBuff(buff);
@@ -234,13 +248,23 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 }
 
 
-void	Server::_checkWriteSet(std::vector<Socket>::iterator iter)
+int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet)
 {
 	// Request request(iter->getBuffer());
 	// request.parseRequest();
 	// std::cout << iter->getBuffer();
 	std::cout << "write!!\n";
-	write(iter->getSocketFd(), iter->getBuffer().c_str(), iter->getBuffer().size() + 1);
+	if (write(iter->getSocketFd(), iter->getBuffer().c_str(), iter->getBuffer().size() + 1) == -1)
+	{
+		// 소켓 연결 해제
+		FD_CLR(iter->getSocketFd(), readSet);
+		FD_CLR(iter->getSocketFd(), writeSet);
+		close(iter->getSocketFd());
+
+		return 1;
+	}
+	// char buf[] = "HTTP/1.0 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nReferrer-Policy: no-referrer\r\nContent-Length: 100\r\nDate: Sun, 13 Jun 2021 06:01:08 GMT\r\n\r\nHello World AAA!!!\r\n";
+	// write(iter->getSocketFd(), buf, strlen(buf));
 	iter->setReadChecker(false);
 	iter->clearBuffer();
 }

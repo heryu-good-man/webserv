@@ -78,7 +78,7 @@ private:
 
 	// cluster socket이 닫히면 return 1
 	int		_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet);
-	void	_checkWriteSet(std::vector<Socket>::iterator iter);
+	int		_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet);
 };
 
 #endif
