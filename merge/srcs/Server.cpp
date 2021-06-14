@@ -267,4 +267,5 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 	// write(iter->getSocketFd(), buf, strlen(buf));
 	iter->setReadChecker(false);
 	iter->clearBuffer();
+	return 0;
 }

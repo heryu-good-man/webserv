@@ -27,7 +27,7 @@ int main(int argc, char** argv, char** envp)
 	// ServerManager manager;
 	// manager._fdManager[3] = server1;
 	std::vector<Server> servers = conf.getServers();
-	int serversSize = servers.size();
+	size_t serversSize = servers.size();
 	for (size_t i = 0; i < serversSize; i++)
 	{
 		std::cout << "PORT : " << servers[i]._port << std::endl;
