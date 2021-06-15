@@ -78,14 +78,13 @@ void	_isValidHTTPVersion(const std::string& httpVersion)
 
 // }
 
-/**
- *  location /{}
- * 	location /a{}
- *  location /a/b {
- * 		root /var/www;    /a/b/c/d/index.html -> /var/www/c/d/index.html
- * 	} 유사성 높은 것부터 찾음 될듯ㅎ
+/*
+** uri와 서버의 location path와 비교
+** 가장 유사한 location을 리턴함
+** uri /a/ 인 경우 -> /a/부터 찾고, 없으면 location /a 매칭임
+** uri /a  인 경우 -> /a/를 찾지 못함, /a은 당연히 매칭임
 */
-Location	Response::getLocation(const Server& server, const std::string& uri)
+Location	Response::getMatchingLocation(const Server& server, const std::string& uri)
 {
 	const std::vector<Location>& locations = server.getLocations();
 	size_t locationSize = locations.size();
@@ -106,24 +105,55 @@ Location	Response::getLocation(const Server& server, const std::string& uri)
 		}
 	}
 	if (samePathSize == 0)
-		throw 404;
+		throw 404; // 404 Not Found
 	return (Location(server.getLocation(searchIndex)));
 }
 
+/*
+** 해당 location에서 허용되는 methods 인지 파악
+** 기본값은 모두 허용임
+*/
 std::string Response::isAllowedMethod(const Location& location, const std::string& requestMethod)
 {
 	std::vector<std::string> allowedMethods = location.getMethods();
+	size_t methodSize = allowedMethods.size();
 	size_t i = 0;
-	while (i < allowedMethods.size())
+	while (i < methodSize)
 	{
 		if (requestMethod == allowedMethods[i])
 			break ;
 		++i;
 	}
-	std::cout << "requestMethod: " << requestMethod << std::endl;
 	if (i == allowedMethods.size())
 		throw 405; // 405 Not Allowed method
 	return (requestMethod);
+}
+
+/*
+** location root가 /var/www이고 path가 /a/b일 때
+** uri가 /a/b/c 라면 -> /var/www/c 를 반환하게 함
+*/
+std::string	Response::getRealPath(const Location& location, const std::string& uri)
+{
+	std::string realPath = uri;
+	const std::string locationPath = location.getPath();
+	const std::string rootDir = location.getRoot();
+	if (locationPath.back() == '/')		// location /a/b/ 같은 경우
+	{
+		if (rootDir.back() == '/')	// root /var/www/ 일 때
+			realPath.replace(0, locationPath.size(), rootDir);
+		else						// root /var/www 일 때
+			realPath.replace(0, locationPath.size() - 1, rootDir);
+	}
+	else 								// location /a/b 같은 경우
+	{
+		if (rootDir.back() == '/')	// root /var/www/ 일 때
+			realPath.replace(0, locationPath.size(), rootDir.substr(0, rootDir.size() - 1));
+		else						// root /var/www 일 때
+			realPath.replace(0, locationPath.size(), rootDir);
+	}
+	std::cout << "realPath: " << realPath << std::endl;
+	return (realPath);
 }
 
 void	Response::response(const Server& server, const Request& request)
@@ -133,9 +163,9 @@ void	Response::response(const Server& server, const Request& request)
 		// if (request.isBadRequest() == true)
 		// 	throw 400 ; // 400 bad request
 		_isValidHTTPVersion(request.getHTTPVersion());
-		Location location = getLocation(server, request.getURI());
-		std::cout << "location path: " << location.getPath() << std::endl;
+		Location location = getMatchingLocation(server, request.getURI());
 		std::string requestMethod = isAllowedMethod(location, request.getMethod());
+		std::string realPath = getRealPath(location, request.getURI());
 
 		// if (requestMethod == "GET")
 		// 	responseGET(server, request);

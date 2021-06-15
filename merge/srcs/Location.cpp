@@ -1,5 +1,6 @@
 #include "Location.hpp"
 
+const std::string METHODS[5] = { "GET", "HEAD", "POST", "PUT", "DELETE" };
 const std::vector<std::string>	DEFAULT_METHOD;					// 변경 필요
 const std::string				DEFAULT_ROOT = "default root"; 	// 변경 필요
 const bool						DEFAULT_AUTOINDEX = false;
@@ -13,7 +14,7 @@ const std::string				DEFAULT_CLIENT_BODY_SIZE = "";
 Location::Location()
 	: _data()
 	, _path()
-	, _methods(DEFAULT_METHOD)
+	, _methods(METHODS, METHODS + 5)
 	, _root(DEFAULT_ROOT)
 	, _autoIndex(DEFAULT_AUTOINDEX)
 	, _indexPages(DEFAULT_INDEX_PAGES)
@@ -143,6 +144,7 @@ bool	Location::setMemberData(void)
 
 void	Location::_setMethod(const std::string& value)
 {
+	_methods.clear();
 	std::string tmpValue = value;
 	while (tmpValue.find(" ") != std::string::npos)
 	{

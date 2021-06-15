@@ -15,6 +15,7 @@ public:
 	~Response(void);
 	Response	&operator=(const Response &ref);
 	Location	getLocation(const Server& server, const std::string& uri);
+	std::string	getRealPath(const Location& location, const std::string& uri);
 	std::string	isAllowedMethod(const Location& location, const std::string& method);
 	void		response(const Server& server, const Request& request);
 	void 		parseBody(const Server& server);
