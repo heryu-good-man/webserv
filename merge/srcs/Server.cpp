@@ -59,7 +59,7 @@ Server& Server::operator=(const Server& rhs)
 	return (*this);
 }
 
-Location	Server::getLocation(size_t index) const
+const Location&	Server::getLocation(size_t index) const
 {
 	if (0 <= index && index < _locations.size())
 		return (_locations[index]);
@@ -67,7 +67,7 @@ Location	Server::getLocation(size_t index) const
 		throw std::runtime_error("index error: out_of_index by getServer");
 }
 
-std::vector<Location>	Server::getLocations(void) const
+const std::vector<Location>&	Server::getLocations(void) const
 {
 	return (_locations);
 }
@@ -257,6 +257,8 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 	Request request(iter->getBuffer());
 	request.parseRequest();
 	std::cout << "write!!\n";
+	Response tmp;
+	tmp.response(*this, request);
 	if (write(iter->getSocketFd(), iter->getBuffer().c_str(), iter->getBuffer().size() + 1) == -1)
 	{
 		// 소켓 연결 해제
@@ -266,8 +268,9 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 
 		return 1;
 	}
-	// char buf[] = "HTTP/1.0 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nReferrer-Policy: no-referrer\r\nContent-Length: 100\r\nDate: Sun, 13 Jun 2021 06:01:08 GMT\r\n\r\nHello World AAA!!!\r\n";
+	// char buf[] = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\nContent-Length: 100\r\nDate: Sun, 13 Jun 2021\r\n\r\nHello World AAA!!!\r\n";
 	// write(iter->getSocketFd(), buf, strlen(buf));
 	iter->setReadChecker(false);
 	iter->clearBuffer();
+	return 0;
 }

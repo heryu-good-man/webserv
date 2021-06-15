@@ -16,6 +16,7 @@
 # include "Config.hpp"
 # include "Location.hpp"
 # include "Request.hpp"
+# include "Response.hpp"
 
 class Server
 {
@@ -33,9 +34,9 @@ public:
 	Server& operator=(const Server& rhs);
 
 	// ***********************GETTER************************
-	int						getListenSocket() const;
-	Location				getLocation(size_t index) const;
-	std::vector<Location>	getLocations(void) const;
+	int								getListenSocket() const;
+	const Location&					getLocation(size_t index) const;
+	const std::vector<Location>&	getLocations(void) const;
 
 	bool					setMemberData(void);
 
@@ -61,7 +62,7 @@ private:
 	// 읽었는지 확인하는 bool이 필요함. buffer도 함께 가지고 있다.
 	// std::map<int, std::pair<std::string, bool> >	_sockets;
 	std::vector<Socket> _sockets;
-	
+
 	// config data
 	std::map<std::string, std::string>	_data;
 	std::vector<Location>				_locations;

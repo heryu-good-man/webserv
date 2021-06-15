@@ -256,6 +256,8 @@ std::string	Config::_getLocationPath(const std::string& content) const
 			throw std::runtime_error("config error: there is space in location path");
 		i++;
 	}
+	if (locationPath[locationPath.size() - 1] != '/')
+		locationPath += "/";
 	return (locationPath);
 }
 

@@ -9,13 +9,14 @@ SRCS = Frame.cpp	\
 	Config.cpp	\
 	Location.cpp	\
 	Request.cpp		\
+	Response.cpp	\
 	Utils.cpp		\
 
 
 OBJS = $(addprefix ./srcs/, $(SRCS:.cpp=.o))
 
 all : $(NAME)
-	
+
 %.o : %.cpp
 	$(CLANG) $(FLAG) $(SANITIZE) $(INCLUDE) -c $^ -o $@
 
