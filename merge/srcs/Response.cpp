@@ -84,7 +84,7 @@ void	_isValidHTTPVersion(const std::string& httpVersion)
 ** uri /a/ 인 경우 -> /a/부터 찾고, 없으면 location /a 매칭임
 ** uri /a  인 경우 -> /a/를 찾지 못함, /a은 당연히 매칭임
 */
-Location	Response::getMatchingLocation(const Server& server, const std::string& uri)
+Location	Response::getMatchingLocation(const Server& server, const std::string& uri) const
 {
 	const std::vector<Location>& locations = server.getLocations();
 	size_t locationSize = locations.size();
@@ -113,7 +113,7 @@ Location	Response::getMatchingLocation(const Server& server, const std::string& 
 ** 해당 location에서 허용되는 methods 인지 파악
 ** 기본값은 모두 허용임
 */
-std::string Response::isAllowedMethod(const Location& location, const std::string& requestMethod)
+std::string Response::isAllowedMethod(const Location& location, const std::string& requestMethod) const
 {
 	std::vector<std::string> allowedMethods = location.getMethods();
 	size_t methodSize = allowedMethods.size();
@@ -133,7 +133,7 @@ std::string Response::isAllowedMethod(const Location& location, const std::strin
 ** location root가 /var/www이고 path가 /a/b일 때
 ** uri가 /a/b/c 라면 -> /var/www/c 를 반환하게 함
 */
-std::string	Response::getRealPath(const Location& location, const std::string& uri)
+std::string	Response::getRealPath(const Location& location, const std::string& uri) const
 {
 	std::string realPath = uri;
 	const std::string locationPath = location.getPath();
@@ -152,8 +152,22 @@ std::string	Response::getRealPath(const Location& location, const std::string& u
 		else						// root /var/www 일 때
 			realPath.replace(0, locationPath.size(), rootDir);
 	}
-	std::cout << "realPath: " << realPath << std::endl;
 	return (realPath);
+}
+
+/*
+** stat으로 FILE인지 DIR인지 파악함
+** stat을 실패하는 건 -> 경로를 찾을 수 없는 것 -> 404
+**
+*/
+int		Response::getType(const std::string& realPath) const
+{
+	struct stat statBuf;
+	if (stat(realPath.c_str(), &statBuf) == -1)
+		throw 404;
+	if (S_ISDIR(statBuf.st_mode))
+		return (DIR);
+	return (FILE);
 }
 
 void	Response::response(const Server& server, const Request& request)
@@ -166,6 +180,9 @@ void	Response::response(const Server& server, const Request& request)
 		Location location = getMatchingLocation(server, request.getURI());
 		std::string requestMethod = isAllowedMethod(location, request.getMethod());
 		std::string realPath = getRealPath(location, request.getURI());
+		int n = getType(realPath);
+
+
 
 		// if (requestMethod == "GET")
 		// 	responseGET(server, request);
