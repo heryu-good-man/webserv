@@ -14,10 +14,15 @@ private:
 	std::string _body;
 public:
 	Request(std::string);
-	void parseRequest();
-	void parseStartLine();
-	void parseHeader();
-	void parseBody();
+	void parseRequest(void);
+	void parseStartLine(void);
+	void parseHeader(void);
+	void parseBody(void);
+
+	/* getter */
+	std::string* getStartLine(void);
+	std::map<std::string, std::string> getHeaders(void);
+	std::string getBody(void);
 };
 
 #endif
