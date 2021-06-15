@@ -1,4 +1,4 @@
-NAME = server
+NAME = webserv
 CLANG = clang++
 FLAG = -Wall -Wextra -Werror
 SANITIZE = -g3 -fsanitize=address
