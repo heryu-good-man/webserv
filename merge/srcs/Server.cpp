@@ -117,6 +117,10 @@ void	Server::_setListen(const std::string& value)
 		_port = atoi(splitedValue.first.c_str());
 		_host = splitedValue.second;
 	}
+	else
+	{
+		_port = atoi(tmpValue.c_str());
+	}
 }
 
 void	Server::_setServerName(const std::string& value)
@@ -267,5 +271,4 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 	// write(iter->getSocketFd(), buf, strlen(buf));
 	iter->setReadChecker(false);
 	iter->clearBuffer();
-	return 0;
 }
