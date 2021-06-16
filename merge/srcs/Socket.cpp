@@ -9,6 +9,7 @@ Socket::Socket()
 Socket::Socket(int fd)
 {
 	_socketFd = fd;
+	_readChecker = false;
 	_bodyLen = 0;
 }
 
@@ -29,6 +30,8 @@ Socket		&Socket::operator=(const Socket &rvalue)
 		_readChecker = rvalue._readChecker;
 		_socketFd = rvalue._socketFd;
 		_bodyLen = rvalue._bodyLen;
+		_chunkedBuff = rvalue._chunkedBuff;
+		_startIndex = rvalue._startIndex;
 	}
 	return *this;
 }
