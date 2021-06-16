@@ -30,15 +30,15 @@ public:
 	// GETTER
 	const std::map<std::string, std::string>	getData() const;
 	const std::string							getPath() const;
-	const std::vector<std::string>			getMethods() const;
+	const std::vector<std::string>&			getMethods() const;
 	const std::string							getRoot() const;
 	bool								getAutoIndex() const;
-	const std::vector<std::string>			getIndexPages() const;
+	const std::vector<std::string>&			getIndexPages() const;
 	const std::string							getCGI() const;
 	const std::string							getCGIPath() const;
 	const std::string							getReturn() const;
 	bool								getUploadEnable() const;
-	const std::string							getClientBodySize() const;
+	size_t							getClientBodySize() const;
 
 private:
 	std::map<std::string, std::string>	_data;
@@ -52,7 +52,7 @@ private:
 	std::string							_CGIPath;
 	std::string							_return;
 	bool								_uploadEnable;
-	std::string							_clientBodySize;
+	size_t								_clientBodySize;
 
 	Key		_getKeyNumber(const std::string& key) const;
 	void	_setMethod(const std::string& value);

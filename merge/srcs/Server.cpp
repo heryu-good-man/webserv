@@ -259,7 +259,8 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 	std::cout << "write!!\n";
 	Response tmp;
 	tmp.response(*this, request);
-	if (write(iter->getSocketFd(), iter->getBuffer().c_str(), iter->getBuffer().size() + 1) == -1)
+
+	if (write(iter->getSocketFd(), tmp.getRet().c_str(), tmp.getRet().size()) == -1)
 	{
 		// 소켓 연결 해제
 		FD_CLR(iter->getSocketFd(), readSet);
@@ -268,6 +269,15 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 
 		return 1;
 	}
+	// if (write(iter->getSocketFd(), iter->getBuffer().c_str(), iter->getBuffer().size() + 1) == -1)
+	// {
+	// 	// 소켓 연결 해제
+	// 	FD_CLR(iter->getSocketFd(), readSet);
+	// 	FD_CLR(iter->getSocketFd(), writeSet);
+	// 	close(iter->getSocketFd());
+
+	// 	return 1;
+	// }
 	// char buf[] = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\nContent-Length: 100\r\nDate: Sun, 13 Jun 2021\r\n\r\nHello World AAA!!!\r\n";
 	// write(iter->getSocketFd(), buf, strlen(buf));
 	iter->setReadChecker(false);

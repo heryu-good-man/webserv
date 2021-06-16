@@ -9,7 +9,7 @@ const std::string				DEFAULT_CGI = "";
 const std::string				DEFAULT_CGI_PATH = "";
 const std::string				DEFAULT_RETURN = "";
 const bool						DEFAULT_UPLOAD_ENABLE = false;
-const std::string				DEFAULT_CLIENT_BODY_SIZE = "";
+const size_t					DEFAULT_CLIENT_BODY_SIZE = ULONG_MAX;
 
 Location::Location()
 	: _data()
@@ -205,7 +205,12 @@ void	Location::_setUploadEnable(const std::string& value)
 
 void	Location::_setClientBodySize(const std::string& value)
 {
-	_clientBodySize = value;
+	size_t coefficient = strtoul(value.c_str(), NULL, 0);
+	_clientBodySize = coefficient;
+	if (value.back() == 'k' || value.back() == 'K')
+		_clientBodySize = coefficient * (1024);
+	if (value.back() == 'g' || value.back() == 'G')
+		_clientBodySize = coefficient * (1024 * 1024);
 }
 
 void	Location::print(void)
@@ -243,7 +248,7 @@ const std::string							Location::getPath() const
 	return _path;
 }
 
-const std::vector<std::string>			Location::getMethods() const
+const std::vector<std::string>&			Location::getMethods() const
 {
 	return _methods;
 }
@@ -258,7 +263,7 @@ bool								Location::getAutoIndex() const
 	return _autoIndex;
 }
 
-const std::vector<std::string>			Location::getIndexPages() const
+const std::vector<std::string>&			Location::getIndexPages() const
 {
 	return _indexPages;
 }
@@ -283,7 +288,7 @@ bool								Location::getUploadEnable() const
 	return _uploadEnable;
 }
 
-const std::string							Location::getClientBodySize() const
+size_t							Location::getClientBodySize() const
 {
 	return _clientBodySize;
 }

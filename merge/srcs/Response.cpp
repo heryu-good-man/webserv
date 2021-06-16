@@ -1,8 +1,11 @@
 #include "Response.hpp"
 
 Response::Response(void)
+	: _ret()
+	, _body()
+	, _statusCode(200)
 {
-	_statusCode = 200;
+
 }
 
 Response::Response(const Response &ref)
@@ -25,58 +28,98 @@ Response		&Response::operator=(const Response &ref)
 	}
 	return *this;
 }
-/*
-1. http 버전확인
- -> invalid하면?? -> 505
 
-2. uri parsing
-	- 1. locations 비교.
-	- 2. location에 맞는 메소드 확인
-	- 3. 파일 디렉터리 구분
-	- 디렉터리 (없으면 상태 만들어)
-		-> 1. 오토인덱스
-		-> 2. index page
-	- 파일 (없으면 상태 만들어)
-		-> 1. content-length, content-type
-	- 4. Content-Languag
-3. 응답메시지 작성.
-*/
+const std::string&	Response::getRet(void) const
+{
+	return (_ret);
+}
 
-void	_isValidHTTPVersion(const std::string& httpVersion)
+void	Response::response(const Server& server, const Request& request)
+{
+	try
+	{
+		// if (request.isBadRequest() == true)
+		// 	throw 400 ; // 400 bad request
+		_isValidHTTPVersion(request.getHTTPVersion());
+		Location location = _getMatchingLocation(server, request.getURI());
+		// if there is return in location, redirection response
+		std::string requestMethod = _isAllowedMethod(location, request.getMethod());
+		std::string realPath = _getRealPath(location, request.getURI());
+
+		if (requestMethod == "GET")
+			_responseGET(location, realPath);
+		// else if (requestMethod == "HEAD")
+		// 	responseHEAD(server, request);
+		// else if (requestMethod == "PUT")
+		// 	responsePUT(server, request);
+		// else if (requestMethod == "POST")
+		// 	responsePOST(server, request); // localhost/a/b/c/d
+		// else if (requestMethod == "DELETE")
+		// 	responseDELETE(server, request);
+		// else
+		// 	return ; // 501 status
+	}
+	catch(int code)
+	{
+		_statusCode = code;
+		std::cout << code << std::endl;
+	}
+}
+
+void	Response::_responseGET(const Location& location, const std::string& realPath)
+{
+	if (_getType(realPath) == FILE)
+		_setBodyFromFile(realPath, location);
+	else // directory
+		_setBodyFromDir(realPath, location);
+
+	int contentType = _getTypeMIME(realPath);
+	_ret += "HTTP/1.1 ";
+	if (_statusCode == 200)
+		_ret += "200 OK\r\n";
+	_ret += "Content-Length: ";
+	_ret += std::to_string(_body.size());
+	_ret += "\r\n";
+
+	_ret += "Content-Type: ";
+	if (_contentType == "")
+	{
+		if (contentType == HTML)
+		_ret += "text/html\r\n";
+		else
+			_ret += "text/plain\r\n";
+	}
+	else
+		_ret += _contentType;
+	_ret += "\r\n";
+	_ret += _body;
+}
+
+void	Response::_isValidHTTPVersion(const std::string& httpVersion) const
 {
 	if (httpVersion != "HTTP/1.1")
 		throw 505;
 }
 
-// void Response::parseBody(const Server& server)
-// {
-
-// }
-
-// void	Response::responseGET(const Server& server, const Request& request)
-// {
-
-// }
-
-// void	Response::responseHEAD(const Server& server, const Request& request)
-// {
-
-// }
-
-// void	Response::responsePUT(const Server& server, const Request& request)
-// {
-
-// }
-
-// void	Response::responsePOST(const Server& server, const Request& request)
-// {
-
-// }
-
-// void	Response::responseDELETE(const Server& server, const Request& request)
-// {
-
-// }
+/*
+** 해당 location에서 허용되는 methods 인지 파악
+** 기본값은 모두 허용임
+*/
+std::string Response::_isAllowedMethod(const Location& location, const std::string& requestMethod) const
+{
+	std::vector<std::string> allowedMethods = location.getMethods();
+	size_t methodSize = allowedMethods.size();
+	size_t i = 0;
+	while (i < methodSize)
+	{
+		if (requestMethod == allowedMethods[i])
+			break ;
+		++i;
+	}
+	if (i == allowedMethods.size())
+		throw 405; // 405 Not Allowed method
+	return (requestMethod);
+}
 
 /*
 ** uri와 서버의 location path와 비교
@@ -84,7 +127,7 @@ void	_isValidHTTPVersion(const std::string& httpVersion)
 ** uri /a/ 인 경우 -> /a/부터 찾고, 없으면 location /a 매칭임
 ** uri /a  인 경우 -> /a/를 찾지 못함, /a은 당연히 매칭임
 */
-Location	Response::getMatchingLocation(const Server& server, const std::string& uri) const
+Location	Response::_getMatchingLocation(const Server& server, const std::string& uri) const
 {
 	const std::vector<Location>& locations = server.getLocations();
 	size_t locationSize = locations.size();
@@ -110,30 +153,10 @@ Location	Response::getMatchingLocation(const Server& server, const std::string& 
 }
 
 /*
-** 해당 location에서 허용되는 methods 인지 파악
-** 기본값은 모두 허용임
-*/
-std::string Response::isAllowedMethod(const Location& location, const std::string& requestMethod) const
-{
-	std::vector<std::string> allowedMethods = location.getMethods();
-	size_t methodSize = allowedMethods.size();
-	size_t i = 0;
-	while (i < methodSize)
-	{
-		if (requestMethod == allowedMethods[i])
-			break ;
-		++i;
-	}
-	if (i == allowedMethods.size())
-		throw 405; // 405 Not Allowed method
-	return (requestMethod);
-}
-
-/*
 ** location root가 /var/www이고 path가 /a/b일 때
 ** uri가 /a/b/c 라면 -> /var/www/c 를 반환하게 함
 */
-std::string	Response::getRealPath(const Location& location, const std::string& uri) const
+std::string	Response::_getRealPath(const Location& location, const std::string& uri) const
 {
 	std::string realPath = uri;
 	const std::string locationPath = location.getPath();
@@ -158,49 +181,139 @@ std::string	Response::getRealPath(const Location& location, const std::string& u
 /*
 ** stat으로 FILE인지 DIR인지 파악함
 ** stat을 실패하는 건 -> 경로를 찾을 수 없는 것 -> 404
-**
 */
-int		Response::getType(const std::string& realPath) const
+int		Response::_getType(const std::string& realPath) const
 {
 	struct stat statBuf;
 	if (stat(realPath.c_str(), &statBuf) == -1)
 		throw 404;
+
 	if (S_ISDIR(statBuf.st_mode))
-		return (DIR);
-	return (FILE);
+		return (DIRECTORY);
+	else
+		return (FILE);
 }
 
-void	Response::response(const Server& server, const Request& request)
+int		Response::_getTypeMIME(const std::string& fileName) const
 {
-	try
+	size_t findExtension = fileName.rfind(".");
+	if (findExtension == std::string::npos)
+		return (TEXT);
+
+	std::string extension = fileName.substr(findExtension + 1);
+	if (extension == "html" || extension == "htm")
+		return (HTML);
+	else
+		return (TEXT);
+}
+
+void	Response::_setBodyFromFile(const std::string& fileName, const Location& location)
+{
+	std::ifstream ifs;
+	ifs.open(fileName, std::ios_base::in);
+	if (!ifs.is_open())
+		throw 500;
+
+	std::ostringstream oss;
+	size_t clientBodySize = location.getClientBodySize();
+	size_t curSize = 0;
+	char buf[1024];
+	while (curSize < clientBodySize)
 	{
-		// if (request.isBadRequest() == true)
-		// 	throw 400 ; // 400 bad request
-		_isValidHTTPVersion(request.getHTTPVersion());
-		Location location = getMatchingLocation(server, request.getURI());
-		std::string requestMethod = isAllowedMethod(location, request.getMethod());
-		std::string realPath = getRealPath(location, request.getURI());
-		int n = getType(realPath);
-
-
-
-		// if (requestMethod == "GET")
-		// 	responseGET(server, request);
-		// else if (requestMethod == "HEAD")
-		// 	responseHEAD(server, request);
-		// else if (requestMethod == "PUT")
-		// 	responsePUT(server, request);
-		// else if (requestMethod == "POST")
-		// 	responsePOST(server, request); // localhost/a/b/c/d
-		// else if (requestMethod == "DELETE")
-		// 	responseDELETE(server, request);
-		// else
-		// 	return ; // 501 status
+		ifs.getline(buf, 1024);
+		if (ifs.fail())
+		{
+			ifs.clear();
+			break ;
+		}
+		oss << buf;
+		curSize += strlen(buf);
+		if (!ifs.eof())
+			oss << "\r\n";
 	}
-	catch(int code)
+	ifs.close();
+
+	if (curSize > clientBodySize)
+		_body = oss.str().substr(0, clientBodySize);
+	else
+		_body = oss.str();
+}
+
+void	Response::_setBodyFromDir(const std::string& path, const Location& location)
+{
+	std::string dirPath = path;
+	if (dirPath.back() != '/')
+		dirPath += "/";
+
+	// search indexpages
+	const std::vector<std::string> indexPages = location.getIndexPages();
+
+	std::vector<std::string>::const_iterator it = indexPages.begin();
+	std::vector<std::string>::const_iterator endIter = indexPages.end();
+	while (it != endIter)
 	{
-		_statusCode = code;
-		std::cout << code << std::endl;
+		DIR *pDir = opendir(dirPath.c_str());
+		if (pDir == NULL)
+			throw 500;
+		struct dirent *dirEnt;
+		bool found = false;
+		while ((dirEnt = readdir(pDir)) != NULL)
+		{
+			if (dirEnt->d_name == *it)
+			{
+				found = true;
+				break ;
+			}
+		}
+		closedir(pDir);
+		if (found)
+			break ;
+		++it;
+	}
+	if (it != endIter)
+	{
+		_contentType = "text/html\r\n";
+		return (_setBodyFromFile(dirPath + (*it), location));
 	}
 
+	// autoindex
+	if (location.getAutoIndex() == true)
+	{
+		_contentType = "text/html\r\n";
+		return (_setAutoIndex(dirPath));
+	}
+
+	// else 403 status
+	throw 403;
+}
+
+void Response::_setAutoIndex(const std::string& dirPath)
+{
+    std::string former =
+    "<html>\n<head><title>Index of /</title></head>\n<body bgcolor=\"white\">\n<h1>Index of /</h1>\n<hr><pre>\n";
+    std::string latter = "</pre><hr></body>\n</html>";
+    std::string prefix = "<a href=\"";
+    std::string suffix = "</a>\n";
+	std::ostringstream oss;
+
+    oss << former;
+    DIR *pDir = opendir(dirPath.c_str());
+    struct dirent *dir_ent;
+    while ((dir_ent = readdir(pDir)) != NULL)
+    {
+        oss << prefix;
+        oss << dir_ent->d_name;
+        if (dir_ent->d_type == DT_DIR)
+            oss << "/";
+        oss << "\">";
+        oss << dir_ent->d_name;
+        if (dir_ent->d_type == DT_DIR)
+            oss <<  "/";
+        oss << suffix;
+    }
+    closedir(pDir);
+    oss << latter;
+	_body = oss.str();
+
+	_contentType = "text/html\r\n";
 }
