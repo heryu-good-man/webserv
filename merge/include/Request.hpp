@@ -37,12 +37,17 @@ public:
 	{
 		return _badRequset;
 	}
+	void	addBody(std::string body)
+	{
+		_body += body;
+	}
 private:
 	std::string _message;
 	std::string _startLine[3];
 	std::map<std::string, std::string> _headers;
 	std::string _body;
-	bool _badRequset;
+	bool		_badRequset;
+	// int			_bodyLen;
 };
 
 #endif
