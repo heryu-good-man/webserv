@@ -29,11 +29,6 @@ Response		&Response::operator=(const Response &ref)
 	return *this;
 }
 
-const std::string&	Response::getRet(void) const
-{
-	return (_ret);
-}
-
 std::string	Response::makeErrorResponse()
 {
 	setStatusMap();
@@ -322,9 +317,9 @@ void	Response::_setBodyFromDir(const std::string& path, const Location& location
 
 void Response::_setBodyFromAutoIndex(const Request& request, const std::string& dirPath)
 {
-	std::string tmpURI = request.getURI();
-	if (tmpURI.back() != '/')
-		tmpURI += "/";
+	std::string requestURI = request.getURI();
+	if (requestURI.back() != '/')
+		requestURI += "/";
     std::string former =
     "<html>\n<head><title>Index of /</title></head>\n<body bgcolor=\"white\">\n<h1>Index of /</h1>\n<hr><pre>\n";
     std::string latter = "</pre><hr></body>\n</html>";
@@ -340,7 +335,7 @@ void Response::_setBodyFromAutoIndex(const Request& request, const std::string& 
     while ((dir_ent = readdir(pDir)) != NULL)
     {
         oss << prefix;
-        oss << tmpURI << dir_ent->d_name;
+        oss << requestURI << dir_ent->d_name;
         if (dir_ent->d_type == DT_DIR)
             oss << "/";
         oss << "\">";

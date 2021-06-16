@@ -1,8 +1,8 @@
 #include "Location.hpp"
 
 const std::string METHODS[5] = { "GET", "HEAD", "POST", "PUT", "DELETE" };
-const std::vector<std::string>	DEFAULT_METHOD;					// 변경 필요
-const std::string				DEFAULT_ROOT = "default root"; 	// 변경 필요
+const std::vector<std::string>	DEFAULT_METHOD;
+const std::string				DEFAULT_ROOT = "/";
 const bool						DEFAULT_AUTOINDEX = false;
 const std::vector<std::string>	DEFAULT_INDEX_PAGES;
 const std::string				DEFAULT_CGI = "";

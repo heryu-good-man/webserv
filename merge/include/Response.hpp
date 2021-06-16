@@ -24,11 +24,9 @@ public:
 	Response(void);
 	Response(const Response &ref);
 	~Response(void);
-	Response	&operator=(const Response &ref);
+	Response &operator=(const Response &ref);
 
-	const std::string&	getRet(void) const;
-
-	void		response(const Server& server, const Request& request);
+	void	response(const Server& server, const Request& request);
 	void	setStatusMap()
 	{
 		_statusMap = new std::map<int, std::string>;
@@ -45,7 +43,7 @@ public:
 		_statusMap->insert(std::pair<int, std::string>(503, "Service Unavailable"));
 		_statusMap->insert(std::pair<int, std::string>(505, "HTTP Version Not Supported"));
 	}
-	void unsetStatusMap(void)
+	void	unsetStatusMap(void)
 	{
 		_statusMap->clear();
 		delete _statusMap;
@@ -55,7 +53,7 @@ public:
 		return _statusMap;
 	}
 	std::string makeErrorResponse(void);
-	std::string getResponse(void)
+	const std::string& getResponse(void) const
 	{
 		return _ret;
 	}
