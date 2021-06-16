@@ -235,6 +235,8 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 
 	request.parseRequest();
 	std::string method = request.getStartLine()[0];
+	std::cout << "test\n" << std::endl;
+	// ㅇ겨ㅣ기는 감
 	if (method == "POST" || method == "PUT")
 	{
 		std::map<std::string, std::string> requestHeader = request.getHeaders();
@@ -307,7 +309,7 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 					iter->addStringToBuff(iter->getChunkedBuff().substr(endIndex + 2, chunckSize));
 					// startindex잡는건 한줄 읽고 나서.
 					iter->setStartIndex(endIndex + 2);
-				}	
+				}
 			}
 		}
 	}
