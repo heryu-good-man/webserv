@@ -255,11 +255,13 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet)
 {
 	Request request(iter->getBuffer());
+	std::cout << "buf: " << iter->getBuffer() << std::endl;
+	// if (iter->getBuffer() == "")
+	// 	return 0;
 	request.parseRequest();
 	std::cout << "write!!\n";
 	Response tmp;
 	tmp.response(*this, request);
-
 	if (write(iter->getSocketFd(), tmp.getRet().c_str(), tmp.getRet().size()) == -1)
 	{
 		// 소켓 연결 해제

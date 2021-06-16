@@ -8,6 +8,7 @@
 # include <sys/stat.h>
 # include <cstdlib>
 # include <dirent.h>
+# include <map>
 # include "Request.hpp"
 # include "Location.hpp"
 
@@ -28,17 +29,46 @@ public:
 	const std::string&	getRet(void) const;
 
 	void		response(const Server& server, const Request& request);
-
+	void	setStatusMap()
+	{
+		_statusMap = new std::map<int, std::string>;
+		_statusMap->insert(std::pair<int, std::string>(200, "OK"));
+		_statusMap->insert(std::pair<int, std::string>(201, "Created"));
+		_statusMap->insert(std::pair<int, std::string>(301, "Moved Permanantly"));
+		_statusMap->insert(std::pair<int, std::string>(400, "Bad Request"));
+		_statusMap->insert(std::pair<int, std::string>(403, "Forbidden"));
+		_statusMap->insert(std::pair<int, std::string>(404, "Not found"));
+		_statusMap->insert(std::pair<int, std::string>(405, "Not Allowed Method"));
+		_statusMap->insert(std::pair<int, std::string>(500, "Internal Server Error"));
+		_statusMap->insert(std::pair<int, std::string>(501, "Not Implemented"));
+		_statusMap->insert(std::pair<int, std::string>(502, "Bad Gateway"));
+		_statusMap->insert(std::pair<int, std::string>(503, "Service Unavailable"));
+		_statusMap->insert(std::pair<int, std::string>(505, "HTTP Version Not Supported"));
+	}
+	void unsetStatusMap(void)
+	{
+		_statusMap->clear();
+		delete _statusMap;
+	}
+	std::map<int, std::string>* getStatusMap(void)
+	{
+		return _statusMap;
+	}
+	std::string makeErrorResponse(void);
+	std::string getResponse(void)
+	{
+		return _ret;
+	}
 
 private:
 	std::string		_ret;
 	std::string		_body;
 	int				_statusCode;
-
+	std::map<int, std::string>*_statusMap;
 	std::string		_contentType;
 
 
-	void		_responseGET(const Location& location, const std::string& realPath);
+	void		_responseGET(const Location&, const std::string&, const Request&);
 
 	void		_isValidHTTPVersion(const std::string& httpVersion) const;
 	std::string	_isAllowedMethod(const Location& location, const std::string& method) const;
@@ -49,9 +79,13 @@ private:
 	int			_getTypeMIME(const std::string& fileName) const;
 
 	void		_setBodyFromFile(const std::string& fileName, const Location& location);
-	void		_setBodyFromDir(const std::string& dirPath, const Location& location);
+	void		_setBodyFromDir(const std::string& dirPath, const Location&, const Request&);
+	void 		_setBodyFromAutoIndex(const Request& request, const std::string& dirPath);
 
-	void 		_setAutoIndex(const std::string& dirPath);
+	void		_writeStartLine(void);
+	void		_writeHeaders(void);
+	void		_writeBody(void);
+
 };
 
 #endif

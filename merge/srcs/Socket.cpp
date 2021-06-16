@@ -7,6 +7,7 @@ Socket::Socket()
 
 Socket::Socket(int fd)
 {
+	_readChecker = false;
 	_socketFd = fd;
 }
 

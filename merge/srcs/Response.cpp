@@ -34,6 +34,22 @@ const std::string&	Response::getRet(void) const
 	return (_ret);
 }
 
+std::string	Response::makeErrorResponse()
+{
+	setStatusMap();
+	std::map<int, std::string>* StatusMap = getStatusMap();
+	std::string statusText = StatusMap->find(_statusCode)->second;
+	std::string status = std::to_string(_statusCode) + " " + statusText;
+	std::string ret = "HTTP/1.1 ";
+	ret += status;
+	ret += "\r\nContent-Type: text/html\r\nContent-Length: ";
+	ret += std::to_string(status.size());
+	ret += "\r\n\r\n";
+	ret += status;
+	unsetStatusMap();
+	return (ret);
+}
+
 void	Response::response(const Server& server, const Request& request)
 {
 	try
@@ -47,7 +63,7 @@ void	Response::response(const Server& server, const Request& request)
 		std::string realPath = _getRealPath(location, request.getURI());
 
 		if (requestMethod == "GET")
-			_responseGET(location, realPath);
+			_responseGET(location, realPath, request);
 		// else if (requestMethod == "HEAD")
 		// 	responseHEAD(server, request);
 		// else if (requestMethod == "PUT")
@@ -63,36 +79,52 @@ void	Response::response(const Server& server, const Request& request)
 	{
 		_statusCode = code;
 		std::cout << code << std::endl;
+		_ret = makeErrorResponse();
 	}
 }
 
-void	Response::_responseGET(const Location& location, const std::string& realPath)
+void	Response::_writeStartLine(void)
 {
-	if (_getType(realPath) == FILE)
-		_setBodyFromFile(realPath, location);
-	else // directory
-		_setBodyFromDir(realPath, location);
-
-	int contentType = _getTypeMIME(realPath);
+	_ret = "";
 	_ret += "HTTP/1.1 ";
-	if (_statusCode == 200)
+	if (_statusCode == 200) // need mapping statusCode map
 		_ret += "200 OK\r\n";
+}
+
+void	Response::_writeHeaders(void)
+{
+	// Server
+	_ret += "Server: webserv\r\n";
+
+	// Content-Length
 	_ret += "Content-Length: ";
 	_ret += std::to_string(_body.size());
 	_ret += "\r\n";
 
+	// Content-Type
 	_ret += "Content-Type: ";
-	if (_contentType == "")
-	{
-		if (contentType == HTML)
-		_ret += "text/html\r\n";
-		else
-			_ret += "text/plain\r\n";
-	}
-	else
-		_ret += _contentType;
+	_ret += _contentType;
 	_ret += "\r\n";
+
+	// Date
+
+	_ret += "\r\n";
+}
+
+void	Response::_writeBody(void)
+{
 	_ret += _body;
+}
+
+void	Response::_responseGET(const Location& location, const std::string& realPath, const Request& request)
+{
+	if (_getType(realPath) == FILE)
+		_setBodyFromFile(realPath, location);
+	else // directory
+		_setBodyFromDir(realPath, location, request);
+	_writeStartLine();
+	_writeHeaders();
+	_writeBody();
 }
 
 void	Response::_isValidHTTPVersion(const std::string& httpVersion) const
@@ -131,16 +163,19 @@ Location	Response::_getMatchingLocation(const Server& server, const std::string&
 {
 	const std::vector<Location>& locations = server.getLocations();
 	size_t locationSize = locations.size();
-	size_t uriSize = uri.size();
 	size_t samePathSize = 0;
 	size_t searchIndex = 0;
+	std::string tmpURI = uri;
+	if (uri.back() != '/')
+		tmpURI += "/";
+	size_t uriSize = tmpURI.size();
 	for (size_t i = 0; i < locationSize; ++i)
 	{
 		const std::string locationPath = locations[i].getPath();
 		const size_t pathSize = locationPath.size();
 		if (uriSize >= pathSize) // uri길이가 크거나 같을 때 찾음
 		{
-			if (uri.find(locationPath) != std::string::npos && samePathSize < pathSize) // uri에 locationPath가 있을 경우, 가장 큰 것
+			if (tmpURI.find(locationPath) != std::string::npos && samePathSize < pathSize) // uri에 locationPath가 있을 경우, 가장 큰 것
 			{
 				samePathSize = pathSize;
 				searchIndex = i;
@@ -187,7 +222,6 @@ int		Response::_getType(const std::string& realPath) const
 	struct stat statBuf;
 	if (stat(realPath.c_str(), &statBuf) == -1)
 		throw 404;
-
 	if (S_ISDIR(statBuf.st_mode))
 		return (DIRECTORY);
 	else
@@ -237,9 +271,14 @@ void	Response::_setBodyFromFile(const std::string& fileName, const Location& loc
 		_body = oss.str().substr(0, clientBodySize);
 	else
 		_body = oss.str();
+
+	if (_getTypeMIME(fileName) == HTML)
+		_contentType = "text/html";
+	else
+		_contentType = "text/plain";
 }
 
-void	Response::_setBodyFromDir(const std::string& path, const Location& location)
+void	Response::_setBodyFromDir(const std::string& path, const Location& location, const Request& request)
 {
 	std::string dirPath = path;
 	if (dirPath.back() != '/')
@@ -271,24 +310,21 @@ void	Response::_setBodyFromDir(const std::string& path, const Location& location
 		++it;
 	}
 	if (it != endIter)
-	{
-		_contentType = "text/html\r\n";
 		return (_setBodyFromFile(dirPath + (*it), location));
-	}
 
 	// autoindex
 	if (location.getAutoIndex() == true)
-	{
-		_contentType = "text/html\r\n";
-		return (_setAutoIndex(dirPath));
-	}
+		return (_setBodyFromAutoIndex(request, dirPath));
 
 	// else 403 status
 	throw 403;
 }
 
-void Response::_setAutoIndex(const std::string& dirPath)
+void Response::_setBodyFromAutoIndex(const Request& request, const std::string& dirPath)
 {
+	std::string tmpURI = request.getURI();
+	if (tmpURI.back() != '/')
+		tmpURI += "/";
     std::string former =
     "<html>\n<head><title>Index of /</title></head>\n<body bgcolor=\"white\">\n<h1>Index of /</h1>\n<hr><pre>\n";
     std::string latter = "</pre><hr></body>\n</html>";
@@ -298,11 +334,13 @@ void Response::_setAutoIndex(const std::string& dirPath)
 
     oss << former;
     DIR *pDir = opendir(dirPath.c_str());
+	if (pDir == NULL)
+		throw 500;
     struct dirent *dir_ent;
     while ((dir_ent = readdir(pDir)) != NULL)
     {
         oss << prefix;
-        oss << dir_ent->d_name;
+        oss << tmpURI << dir_ent->d_name;
         if (dir_ent->d_type == DT_DIR)
             oss << "/";
         oss << "\">";
@@ -315,5 +353,5 @@ void Response::_setAutoIndex(const std::string& dirPath)
     oss << latter;
 	_body = oss.str();
 
-	_contentType = "text/html\r\n";
+	_contentType = "text/html";
 }
