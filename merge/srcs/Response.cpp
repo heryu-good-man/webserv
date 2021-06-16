@@ -53,14 +53,15 @@ void	Response::response(const Server& server, const Request& request)
 		// 	throw 400 ; // 400 bad request
 		_isValidHTTPVersion(request.getHTTPVersion());
 		Location location = _getMatchingLocation(server, request.getURI());
-		// if there is return in location, redirection response
 		std::string requestMethod = _isAllowedMethod(location, request.getMethod());
 		std::string realPath = _getRealPath(location, request.getURI());
 
+		if (location.getReturn() != "")
+			return (_responseRedirect(location));
 		if (requestMethod == "GET")
-			_responseGET(location, realPath, request);
-		// else if (requestMethod == "HEAD")
-		// 	responseHEAD(server, request);
+			_responseGET(location, realPath, request, true);
+		else if (requestMethod == "HEAD")
+			_responseGET(location, realPath, request, false);
 		// else if (requestMethod == "PUT")
 		// 	responsePUT(server, request);
 		// else if (requestMethod == "POST")
@@ -111,7 +112,23 @@ void	Response::_writeBody(void)
 	_ret += _body;
 }
 
-void	Response::_responseGET(const Location& location, const std::string& realPath, const Request& request)
+void	Response::_responseRedirect(const Location& location)
+{
+	const std::string& value = location.getReturn();
+	std::pair<std::string, std::string> p = splitString(value, " ");
+	if (p.first == "301")
+	{
+		_ret = "";
+		_ret += "HTTP/1.1 301 Moved Permanantly\r\n";
+		_ret += "Server: webserv\r\n";
+		_ret += "Location: " + p.second + "\r\n";
+		_ret += "\r\n";
+	}
+	else
+		throw 500;
+}
+
+void	Response::_responseGET(const Location& location, const std::string& realPath, const Request& request, bool isGET)
 {
 	if (_getType(realPath) == FILE)
 		_setBodyFromFile(realPath, location);
@@ -119,7 +136,8 @@ void	Response::_responseGET(const Location& location, const std::string& realPat
 		_setBodyFromDir(realPath, location, request);
 	_writeStartLine();
 	_writeHeaders();
-	_writeBody();
+	if (isGET)
+		_writeBody();
 }
 
 void	Response::_isValidHTTPVersion(const std::string& httpVersion) const
@@ -134,6 +152,9 @@ void	Response::_isValidHTTPVersion(const std::string& httpVersion) const
 */
 std::string Response::_isAllowedMethod(const Location& location, const std::string& requestMethod) const
 {
+	if (requestMethod != "GET" && requestMethod != "HEAD" &&
+		requestMethod != "POST" && requestMethod != "PUT" && requestMethod != "DELETE")
+		throw 501;
 	std::vector<std::string> allowedMethods = location.getMethods();
 	size_t methodSize = allowedMethods.size();
 	size_t i = 0;

@@ -28,15 +28,15 @@ public:
 
 	void	print(void);
 	// GETTER
-	const std::map<std::string, std::string>	getData() const;
-	const std::string							getPath() const;
+	const std::map<std::string, std::string>&	getData() const;
+	const std::string&							getPath() const;
 	const std::vector<std::string>&			getMethods() const;
-	const std::string							getRoot() const;
+	const std::string&							getRoot() const;
 	bool								getAutoIndex() const;
 	const std::vector<std::string>&			getIndexPages() const;
-	const std::string							getCGI() const;
-	const std::string							getCGIPath() const;
-	const std::string							getReturn() const;
+	const std::string&							getCGI() const;
+	const std::string&							getCGIPath() const;
+	const std::string&							getReturn() const;
 	bool								getUploadEnable() const;
 	size_t							getClientBodySize() const;
 

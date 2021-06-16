@@ -238,12 +238,12 @@ void	Location::print(void)
 	std::cout << "\n====================================\n";
 }
 
-const std::map<std::string, std::string>	Location::getData() const
+const std::map<std::string, std::string>&	Location::getData() const
 {
 	return _data;
 }
 
-const std::string							Location::getPath() const
+const std::string&							Location::getPath() const
 {
 	return _path;
 }
@@ -253,7 +253,7 @@ const std::vector<std::string>&			Location::getMethods() const
 	return _methods;
 }
 
-const std::string							Location::getRoot() const
+const std::string&							Location::getRoot() const
 {
 	return _root;
 }
@@ -268,17 +268,17 @@ const std::vector<std::string>&			Location::getIndexPages() const
 	return _indexPages;
 }
 
-const std::string							Location::getCGI() const
+const std::string&							Location::getCGI() const
 {
 	return _CGI;
 }
 
-const std::string							Location::getCGIPath() const
+const std::string&							Location::getCGIPath() const
 {
 	return _CGIPath;
 }
 
-const std::string							Location::getReturn() const
+const std::string&							Location::getReturn() const
 {
 	return _return;
 }

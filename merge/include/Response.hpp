@@ -66,7 +66,8 @@ private:
 	std::string		_contentType;
 
 
-	void		_responseGET(const Location&, const std::string&, const Request&);
+	void		_responseRedirect(const Location& location);
+	void		_responseGET(const Location&, const std::string&, const Request&, bool);
 
 	void		_isValidHTTPVersion(const std::string& httpVersion) const;
 	std::string	_isAllowedMethod(const Location& location, const std::string& method) const;
