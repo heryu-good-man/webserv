@@ -6,12 +6,11 @@ Request::Request(std::string message): _message(message), _badRequset(false)
 
 void Request::parseRequest()
 {
-	if (_message == "")
-		return ;
 	try
 	{
 		parseStartLine();
 		parseHeader();
+		parseBody();
 	}
 	catch(int)
 	{
@@ -74,10 +73,14 @@ void Request::parseHeader()
 		_message = _message.substr(pos + 2);
 		// headerLine을 Key와 Value로 스플릿
 		posColon = headerLine.find(":");
+		// std::cout << "headerLine: " << headerLine << std::endl;
 		if (posColon == headerLine.npos)
 		{
-			if (headerLine != "\r\n")
+			if (!headerLine.empty())
+			{
+				// std::cout << "*************************" << headerLine << std::endl;
 				throw BADREQUEST;
+			}
 			break ;
 		}
 		headerKey = headerLine.substr(0, posColon);
@@ -90,32 +93,33 @@ void Request::parseHeader()
 
 void Request::parseBody()
 {
-	if (_headers.find("content-length") != _headers.end())
-	{
-		_body = _message.substr(atoi(_headers["content-length"].c_str()));
-	}
-	else if (_headers.find("transfer-enconding") != _headers.end())
-	{
-		std::string chunkSizeStr;
-		std::string chunkedBody;
-		long int chunkSize;
-		size_t pos;
-		while (1)
-		{
-			pos = _message.find("\r\n");
-			chunkSizeStr = _message.substr(0, pos);
-			chunkSize = strtol(chunkSizeStr.c_str(), NULL, 16);
-			if (chunkSize != 0)
-			{
-				_message = _message.substr(pos + 2);
-				chunkedBody = _message.substr(0, chunkSize);
-				_body += chunkedBody;
-				_message = _message.substr(chunkSize + 1);
-			}
-			else
-				break ;
-		}
-	}
+	// if (_headers.find("content-length") != _headers.end())
+	// {
+	// 	_body = _message.substr(atoi(_headers["content-length"].c_str()));
+	// }
+	// else if (_headers.find("transfer-enconding") != _headers.end())
+	// {
+	// 	std::string chunkSizeStr;
+	// 	std::string chunkedBody;
+	// 	long int chunkSize;
+	// 	size_t pos;
+	// 	while (1)
+	// 	{
+	// 		pos = _message.find("\r\n");
+	// 		chunkSizeStr = _message.substr(0, pos);
+	// 		chunkSize = strtol(chunkSizeStr.c_str(), NULL, 16);
+	// 		if (chunkSize != 0)
+	// 		{
+	// 			_message = _message.substr(pos + 2);
+	// 			chunkedBody = _message.substr(0, chunkSize);
+	// 			_body += chunkedBody;
+	// 			_message = _message.substr(chunkSize + 1);
+	// 		}
+	// 		else
+	// 			break ;
+	// 	}
+	// }
+	_body = _message;
 }
 
 const std::string* Request::getStartLine(void) const

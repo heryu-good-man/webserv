@@ -12,8 +12,9 @@
 # include "Request.hpp"
 # include "Location.hpp"
 
-# define FILE		1
-# define DIRECTORY	2
+# define TYPE_FILE	1
+# define TYPE_DIR	2
+# define TYPE_NONE	3
 
 # define HTML	1
 # define TEXT	2
@@ -37,6 +38,7 @@ public:
 		_statusMap->insert(std::pair<int, std::string>(403, "Forbidden"));
 		_statusMap->insert(std::pair<int, std::string>(404, "Not found"));
 		_statusMap->insert(std::pair<int, std::string>(405, "Not Allowed Method"));
+		_statusMap->insert(std::pair<int, std::string>(413, "Payload Too Large"));
 		_statusMap->insert(std::pair<int, std::string>(500, "Internal Server Error"));
 		_statusMap->insert(std::pair<int, std::string>(501, "Not Implemented"));
 		_statusMap->insert(std::pair<int, std::string>(502, "Bad Gateway"));
@@ -68,7 +70,10 @@ private:
 
 	void		_responseRedirect(const Location& location);
 	void		_responseGET(const Location&, const std::string&, const Request&, bool);
+	void 		_responseDELETE(const Location& location, const std::string& path);
+	void		_responsePUTorPOST(const Location& location, const std::string& path, const Request& request);
 
+	void		_makeFile(const std::string& path, const Request& req);
 	void		_isValidHTTPVersion(const std::string& httpVersion) const;
 	std::string	_isAllowedMethod(const Location& location, const std::string& method) const;
 
@@ -76,8 +81,8 @@ private:
 	std::string	_getRealPath(const Location& location, const std::string& uri) const;
 	int			_getType(const std::string& realPath) const;
 	int			_getTypeMIME(const std::string& fileName) const;
-
-	void		_setBodyFromFile(const std::string& fileName, const Location& location);
+	std::string _getIndexPage(const std::string& path, const Location& location);
+	void		_setBodyFromFile(const std::string& fileName);
 	void		_setBodyFromDir(const std::string& dirPath, const Location&, const Request&);
 	void 		_setBodyFromAutoIndex(const Request& request, const std::string& dirPath);
 
