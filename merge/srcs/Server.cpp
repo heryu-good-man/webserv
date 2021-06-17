@@ -246,19 +246,13 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 		std::stringstream ss(lenIter->second);
 		int n;
 		if (lenIter != reqEnd && encodingIter != reqEnd)
-		{
-			std::cout << "*********\n";
 			throw 400;
-		}
 		// content-length 확인
 		else if (lenIter != reqEnd)
 		{
 			ss >> n;
 			if (ss.fail())
-			{
-				std::cout << "*********2\n";
 				throw 400;
-			}
 			iter->setBodyLen(n);
 			// 여기 없애야 할거 같은데 나중에 생각하자
 			while ((n = read(iter->getSocketFd(), buff, sizeof(buff))) != 0)
@@ -268,7 +262,7 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 				// 내가 원하는 만큼 버퍼에 가득 찼다
 				if (iter->getBuffer().size() - (pos + 4) <= static_cast<size_t>(iter->getBodyLen()))
 				{
-					request.parseBody();
+					// request.parseBody();
 					iter->setReadChecker(true);
 					break ;
 				}
@@ -303,15 +297,10 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 					ss2 >> chunckSize;
 					// std::cout << "chunckSize: " << chunckSize << std::endl;
 					if (ss2.fail())
-					{
-						std::cout << "chunckSize: " << chunckSize << std::endl;
-						std::cout << "\n";
 						throw 400;
-					}
 					// 일단 숫자 0다음에 \r\n을 한번만 받아도 종료되게끔 만들겠습니다.
 					if (chunckSize == 0)
 					{
-						std::cout << "getChunk : " << iter->getChunkedBuff();
 						iter->setBuff(iter->getBuffer().substr(0, pos + 4) + iter->getChunkedBuff());
 						iter->setReadChecker(true);
 						iter->clearChunkBuffer();
@@ -322,7 +311,6 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 					if (chunckSize > static_cast<int>(tmpBuffer.size()) - (endIndex + 2) - 2)
 						break ;
 					// 다 읽었으면 chunkSize만큼 잘라내서 버퍼에 저장하자.
-					std::cout << "chunckSize : " << chunckSize << std::endl;
 					iter->setChunkedBuff(iter->getChunkedBuff() + tmpBuffer.substr(endIndex + 2, chunckSize));
 					// startindex잡는건 한줄 읽고 나서.
 					iter->setStartIndex(endIndex + chunckSize + 4);
@@ -350,7 +338,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 		{
 			if (n == -1)
 				return _socketDisconnect(iter, readSet, writeSet);
-			std::cout << "read!!\n";
+			// std::cout << "read!!\n";
 			buff[n] = '\0';
 			iter->addStringToBuff(buff);
 			// \r\n\r\n이 있는지 확인

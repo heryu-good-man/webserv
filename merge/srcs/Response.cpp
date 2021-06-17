@@ -52,31 +52,94 @@ std::string	Response::makeErrorResponse(const std::string& req)
 	return (ret);
 }
 
-void	Response::response(const Server& server, const Request& request)
+void	Response::_makeFile(const std::string& path, const Request& req)
+{
+	std::fstream file;
+
+	std::string method = req.getMethod();
+	if (method == "PUT")
+		file.open(path, std::ios_base::out | std::ios_base::trunc);
+	else if (method == "POST")
+		file.open(path, std::ios_base::out | std::ios_base::app);
+	if (!file.is_open())
+		throw 500;
+	// std::cout << "!!!!!!!!!!!!!!!!!!!!!!1" << req.getBody() << std::endl;
+	file << req.getBody();
+	file.close();
+}
+
+void	Response::_responsePUTorPOST(const Location& location, const std::string& path, const Request& request)
+{
+	if (request.getBody().size() > location.getClientBodySize())
+		throw 413;
+	if (location.getUploadEnable() == false)
+		throw 403;
+	
+	int type = _getType(path);
+	if (type == TYPE_DIR) // dir
+	{
+		const std::vector<std::string>& indexPages = location.getIndexPages();
+		if (indexPages.size() == 0)
+			throw 500;
+		else
+		{
+			std::string tmpPath = path;
+			if (tmpPath.back() != '/')
+				tmpPath += "/";
+			if (_getType(tmpPath + indexPages[0]) == TYPE_NONE) // if there is no file, make new file
+				_statusCode = 201;
+			_makeFile(tmpPath + indexPages[0], request);
+		}
+	}
+	else if (type == TYPE_FILE)
+		_makeFile(path, request);
+	else
+	{
+		if (path.back() == '/')
+			throw 500;
+		std::string previousPath = path.substr(0, path.rfind("/"));
+		if (_getType(previousPath) == TYPE_DIR)  // if there is directory, make new file
+		{
+			_statusCode = 201;
+			_makeFile(path, request);
+		}
+		else
+			throw 404;
+	}
+	if (_statusCode == 200)
+		_body = "200 OK";
+	else if (_statusCode == 201)
+		_body = "201 Created";
+	_writeStartLine();
+	_contentType = "text/plain";
+	_writeHeaders();
+	_writeBody();
+}
+
+void    Response::response(const Server& server, const Request& request)
 {
 	try
 	{
 		// if (request.isBadRequest() == true)
-		// 	throw 400 ; // 400 bad request
+		//  throw 400 ; // 400 bad request
 		_isValidHTTPVersion(request.getHTTPVersion());
 		Location location = _getMatchingLocation(server, request.getURI());
 		std::string requestMethod = _isAllowedMethod(location, request.getMethod());
 		std::string realPath = _getRealPath(location, request.getURI());
-
 		if (location.getReturn() != "")
-			return (_responseRedirect(location));
-		if (requestMethod == "GET")
+			_responseRedirect(location);
+		else if (requestMethod == "GET")
 			_responseGET(location, realPath, request, true);
 		else if (requestMethod == "HEAD")
 			_responseGET(location, realPath, request, false);
-		// else if (requestMethod == "PUT")
-		// 	responsePUT(server, request);
+		else if (requestMethod == "DELETE")
+			_responseDELETE(location, realPath);
+		else if (requestMethod == "PUT" || requestMethod == "POST")
+		 	_responsePUTorPOST(location, realPath, request);
 		// else if (requestMethod == "POST")
-		// 	responsePOST(server, request); // localhost/a/b/c/d
-		// else if (requestMethod == "DELETE")
-		// 	responseDELETE(server, request);
+		//  responsePOST(server, request); // localhost/a/b/c/d
 		// else
-		// 	return ; // 501 status
+		//  return ; // 501 status
 	}
 	catch(int code)
 	{
@@ -86,12 +149,15 @@ void	Response::response(const Server& server, const Request& request)
 	}
 }
 
+
 void	Response::_writeStartLine(void)
 {
 	_ret = "";
 	_ret += "HTTP/1.1 ";
 	if (_statusCode == 200) // need mapping statusCode map
 		_ret += "200 OK\r\n";
+	else if (_statusCode == 201)
+		_ret += "201 Create\r\n";
 }
 
 void	Response::_writeHeaders(void)
@@ -137,10 +203,13 @@ void	Response::_responseRedirect(const Location& location)
 
 void	Response::_responseGET(const Location& location, const std::string& realPath, const Request& request, bool isGET)
 {
-	if (_getType(realPath) == FILE)
-		_setBodyFromFile(realPath, location);
-	else // directory
+	int type = _getType(realPath);
+	if (type == TYPE_FILE)
+		_setBodyFromFile(realPath);
+	else if (type == TYPE_DIR)
 		_setBodyFromDir(realPath, location, request);
+	else	// not found
+		throw 404;
 	_writeStartLine();
 	_writeHeaders();
 	if (isGET)
@@ -244,11 +313,11 @@ int		Response::_getType(const std::string& realPath) const
 {
 	struct stat statBuf;
 	if (stat(realPath.c_str(), &statBuf) == -1)
-		throw 404;
+		return (TYPE_NONE);
 	if (S_ISDIR(statBuf.st_mode))
-		return (DIRECTORY);
+		return (TYPE_DIR);
 	else
-		return (FILE);
+		return (TYPE_FILE);
 }
 
 int		Response::_getTypeMIME(const std::string& fileName) const
@@ -264,18 +333,15 @@ int		Response::_getTypeMIME(const std::string& fileName) const
 		return (TEXT);
 }
 
-void	Response::_setBodyFromFile(const std::string& fileName, const Location& location)
+void    Response::_setBodyFromFile(const std::string& fileName)
 {
 	std::ifstream ifs;
 	ifs.open(fileName, std::ios_base::in);
 	if (!ifs.is_open())
 		throw 500;
-
 	std::ostringstream oss;
-	size_t clientBodySize = location.getClientBodySize();
-	size_t curSize = 0;
 	char buf[1024];
-	while (curSize < clientBodySize)
+	while (1)
 	{
 		ifs.getline(buf, 1024);
 		if (ifs.fail())
@@ -284,17 +350,11 @@ void	Response::_setBodyFromFile(const std::string& fileName, const Location& loc
 			break ;
 		}
 		oss << buf;
-		curSize += strlen(buf);
 		if (!ifs.eof())
 			oss << "\r\n";
 	}
 	ifs.close();
-
-	if (curSize > clientBodySize)
-		_body = oss.str().substr(0, clientBodySize);
-	else
-		_body = oss.str();
-
+	_body = oss.str();
 	if (_getTypeMIME(fileName) == HTML)
 		_contentType = "text/html";
 	else
@@ -333,7 +393,7 @@ void	Response::_setBodyFromDir(const std::string& path, const Location& location
 		++it;
 	}
 	if (it != endIter)
-		return (_setBodyFromFile(dirPath + (*it), location));
+		return (_setBodyFromFile(dirPath + (*it)));
 
 	// autoindex
 	if (location.getAutoIndex() == true)
@@ -348,33 +408,93 @@ void Response::_setBodyFromAutoIndex(const Request& request, const std::string& 
 	std::string requestURI = request.getURI();
 	if (requestURI.back() != '/')
 		requestURI += "/";
-    std::string former =
-    "<html>\n<head><title>Index of /</title></head>\n<body bgcolor=\"white\">\n<h1>Index of /</h1>\n<hr><pre>\n";
-    std::string latter = "</pre><hr></body>\n</html>";
-    std::string prefix = "<a href=\"";
-    std::string suffix = "</a>\n";
+	std::string former =
+	"<html>\n<head><title>Index of /</title></head>\n<body bgcolor=\"white\">\n<h1>Index of /</h1>\n<hr><pre>\n";
+	std::string latter = "</pre><hr></body>\n</html>";
+	std::string prefix = "<a href=\"";
+	std::string suffix = "</a>\n";
 	std::ostringstream oss;
 
-    oss << former;
-    DIR *pDir = opendir(dirPath.c_str());
+	oss << former;
+	DIR *pDir = opendir(dirPath.c_str());
 	if (pDir == NULL)
 		throw 500;
-    struct dirent *dir_ent;
-    while ((dir_ent = readdir(pDir)) != NULL)
-    {
-        oss << prefix;
-        oss << requestURI << dir_ent->d_name;
-        if (dir_ent->d_type == DT_DIR)
-            oss << "/";
-        oss << "\">";
-        oss << dir_ent->d_name;
-        if (dir_ent->d_type == DT_DIR)
-            oss <<  "/";
-        oss << suffix;
-    }
-    closedir(pDir);
-    oss << latter;
+	struct dirent *dir_ent;
+	while ((dir_ent = readdir(pDir)) != NULL)
+	{
+		oss << prefix;
+		oss << requestURI << dir_ent->d_name;
+		if (dir_ent->d_type == DT_DIR)
+			oss << "/";
+		oss << "\">";
+		oss << dir_ent->d_name;
+		if (dir_ent->d_type == DT_DIR)
+			oss <<  "/";
+		oss << suffix;
+	}
+	closedir(pDir);
+	oss << latter;
 	_body = oss.str();
 
 	_contentType = "text/html";
 }
+
+void Response::_responseDELETE(const Location& location, const std::string& path)
+{
+	int type = _getType(path);
+	if (type == TYPE_DIR)
+	{
+		// search index -> 없으면 404 error
+		std::string indexPage = _getIndexPage(path, location);
+		if (indexPage == "")
+			throw 404;
+		// 있으면 삭제
+		remove(indexPage.c_str());
+	}
+	else if (type == TYPE_FILE)
+	{
+		remove(path.c_str());
+	}
+	else // not found
+		throw 404;
+	_body = "200 Delete";
+	_writeStartLine();
+	_contentType = "text/plain";
+	_writeHeaders();
+	_writeBody();
+}
+
+std::string Response::_getIndexPage(const std::string& path, const Location& location)
+{
+	std::string dirPath = path;
+	if (dirPath.back() != '/')
+		dirPath += "/";
+	const std::vector<std::string> indexPages = location.getIndexPages();
+	std::vector<std::string>::const_iterator it = indexPages.begin();
+	std::vector<std::string>::const_iterator endIter = indexPages.end();
+	while (it != endIter)
+	{
+		DIR *pDir = opendir(dirPath.c_str());
+		if (pDir == NULL)
+			throw 500;
+		struct dirent *dirEnt;
+		bool found = false;
+		while ((dirEnt = readdir(pDir)) != NULL)
+		{
+			if (dirEnt->d_name == *it)
+			{
+				found = true;
+				break ;
+			}
+		}
+		closedir(pDir);
+		if (found)
+			break ;
+		++it;
+	}
+	if (it != endIter)
+		return (dirPath + (*it));
+	else
+		return (std::string());
+}
+
