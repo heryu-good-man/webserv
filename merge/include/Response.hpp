@@ -52,7 +52,7 @@ public:
 	{
 		return _statusMap;
 	}
-	std::string makeErrorResponse(void);
+	std::string makeErrorResponse(const std::string& req);
 	const std::string& getResponse(void) const
 	{
 		return _ret;

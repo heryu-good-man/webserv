@@ -12,6 +12,8 @@ Socket::Socket(int fd)
 	_socketFd = fd;
 	_readChecker = false;
 	_bodyLen = 0;
+	_startIndex = 0;
+	_chunkedBuff = "";
 }
 
 Socket::Socket(const Socket &from)

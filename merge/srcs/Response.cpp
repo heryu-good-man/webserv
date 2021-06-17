@@ -29,7 +29,7 @@ Response		&Response::operator=(const Response &ref)
 	return *this;
 }
 
-std::string	Response::makeErrorResponse()
+std::string	Response::makeErrorResponse(const std::string& req)
 {
 	setStatusMap();
 	std::map<int, std::string>* StatusMap = getStatusMap();
@@ -37,10 +37,17 @@ std::string	Response::makeErrorResponse()
 	std::string status = std::to_string(_statusCode) + " " + statusText;
 	std::string ret = "HTTP/1.1 ";
 	ret += status;
-	ret += "\r\nContent-Type: text/html\r\nContent-Length: ";
+	ret += "\r\nContent-Type: text/html";
+	ret += "\r\nContent-Length: ";
 	ret += std::to_string(status.size());
+	
+	// if (req != "HEAD")
+	// 	ret += "\r\n\r\n";
+	// else
+	// 	ret += "\r\n";
 	ret += "\r\n\r\n";
-	ret += status;
+	if (req != "HEAD")
+		ret += status;
 	unsetStatusMap();
 	return (ret);
 }
@@ -75,7 +82,7 @@ void	Response::response(const Server& server, const Request& request)
 	{
 		_statusCode = code;
 		std::cout << code << std::endl;
-		_ret = makeErrorResponse();
+		_ret = makeErrorResponse(request.getMethod());
 	}
 }
 
@@ -333,7 +340,7 @@ void	Response::_setBodyFromDir(const std::string& path, const Location& location
 		return (_setBodyFromAutoIndex(request, dirPath));
 
 	// else 403 status
-	throw 403;
+	throw 404;
 }
 
 void Response::_setBodyFromAutoIndex(const Request& request, const std::string& dirPath)
