@@ -12,7 +12,6 @@ void Request::parseRequest()
 	{
 		parseStartLine();
 		parseHeader();
-		parseBody();
 	}
 	catch(int)
 	{
