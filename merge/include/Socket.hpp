@@ -40,9 +40,13 @@ public:
 	{
 		_startIndex = num;
 	}
-	void		setChunkedBuff(std::string str)
+	void		setChunkedBuff(const std::string& str)
 	{
 		_chunkedBuff = str;
+	}
+	void		setBuff(const std::string& str)
+	{
+		_buffer = str;
 	}
 
 	// ***** memberFunction ******

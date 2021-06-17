@@ -278,35 +278,30 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 		{
 			// chunked 체크해야한다.
 			// 여기서 바로 읽어버리자.
-			std::cout << "1\n";
 			if ((n = iter->getBuffer().find("\r\n\r\n", pos + 4)) != -1)
 			{
-				std::cout << "2\n";
 				// 딱 청크드 데이터만 있음
-				if (iter->getChunkedBuff().empty())
-					iter->setChunkedBuff(iter->getBuffer().substr(pos + 4, n));
-				std::cout << "3\n";
+				std::string tmpBuffer;
+
+				tmpBuffer = iter->getBuffer().substr(pos + 4, n);
 				int endIndex;
 				while (1)
 				{
 					std::string oneLine;
-					endIndex = iter->getChunkedBuff().find("\r\n", iter->getStartIndex());
-					std::cout << "getChunkedBuff : " << iter->getChunkedBuff() << std::endl;
+					endIndex = tmpBuffer.find("\r\n", iter->getStartIndex());
+					// std::cout << "getChunkedBuff : " << tmpBuffer << std::endl;
 					// \r\n이 없다?? 그럼 
 					if (endIndex == -1)
-					{
-						std::cout << "4\n";
 						break ;
-					}
 					// 한줄 자르고
 					int	chunckSize;
-					std::cout << "*************startIndex : " << iter->getStartIndex() << std::endl << "endIndex : " << endIndex << std::endl;
-					oneLine = iter->getChunkedBuff().substr(iter->getStartIndex(), endIndex - iter->getStartIndex());
+					// std::cout << "*************startIndex : " << iter->getStartIndex() << std::endl << "endIndex : " << endIndex << std::endl;
+					oneLine = tmpBuffer.substr(iter->getStartIndex(), endIndex - iter->getStartIndex());
 					std::stringstream ss2;
 					ss2 << std::hex << oneLine;
-					std::cout << "oneLine" << oneLine;
+					// std::cout << "oneLine" << oneLine;
 					ss2 >> chunckSize;
-					std::cout << "chunckSize: " << chunckSize << std::endl;
+					// std::cout << "chunckSize: " << chunckSize << std::endl;
 					if (ss2.fail())
 					{
 						std::cout << "chunckSize: " << chunckSize << std::endl;
@@ -316,18 +311,21 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 					// 일단 숫자 0다음에 \r\n을 한번만 받아도 종료되게끔 만들겠습니다.
 					if (chunckSize == 0)
 					{
+						std::cout << "getChunk : " << iter->getChunkedBuff();
+						iter->setBuff(iter->getBuffer().substr(0, pos + 4) + iter->getChunkedBuff());
 						iter->setReadChecker(true);
 						iter->clearChunkBuffer();
 						return ;
 					}
 					// endIndex에 2를 더해야 읽은 문자 갯수에 \r\n을 포함가능하다. 그리고 세어야할 문자열 뒤에 \r\n은 빼고 세어야 하기 때문에 -2를 해줬다.
 					// 더 읽어야함.
-					if (chunckSize > static_cast<int>(iter->getChunkedBuff().size()) - (endIndex + 2) - 2)
+					if (chunckSize > static_cast<int>(tmpBuffer.size()) - (endIndex + 2) - 2)
 						break ;
 					// 다 읽었으면 chunkSize만큼 잘라내서 버퍼에 저장하자.
-					iter->addStringToBuff(iter->getChunkedBuff().substr(endIndex + 2, chunckSize));
+					std::cout << "chunckSize : " << chunckSize << std::endl;
+					iter->setChunkedBuff(iter->getChunkedBuff() + tmpBuffer.substr(endIndex + 2, chunckSize));
 					// startindex잡는건 한줄 읽고 나서.
-					iter->setStartIndex(endIndex + 2);
+					iter->setStartIndex(endIndex + chunckSize + 4);
 				}
 			}
 		}
@@ -396,7 +394,7 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 	std::cout << "============================RESPONSE BUFFER=============================\n";
 	std::cout << tmp.getResponse() << std::endl;
 	std::cout << "========================================================\n";
-	if (write(iter->getSocketFd(), tmp.getResponse().c_str(), tmp.getResponse().size() + 1) == -1)
+	if (write(iter->getSocketFd(), tmp.getResponse().c_str(), tmp.getResponse().size()) == -1)
 		return _socketDisconnect(iter, readSet, writeSet);
 	// char buf[] = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\nContent-Length: 100\r\nDate: Sun, 13 Jun 2021\r\n\r\nHello World AAA!!!\r\n";
 	// write(iter->getSocketFd(), buf, strlen(buf));
