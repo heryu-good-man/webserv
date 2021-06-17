@@ -77,8 +77,10 @@ void removeContinuousSpace(std::string& line)
 std::pair<std::string, std::string> splitString(const std::string& str, const std::string& deli)
 {
 	size_t pivot = str.find(deli);
+	if (pivot == std::string::npos)
+		return (std::make_pair(str, str));
+
 	std::string first = str.substr(0, pivot);
 	std::string last = str.substr(pivot + 1, str.size() - (pivot + 1));
-
 	return (std::make_pair(first, last));
 }

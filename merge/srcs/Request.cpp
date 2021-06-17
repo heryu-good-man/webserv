@@ -1,6 +1,6 @@
 #include "Request.hpp"
 
-Request::Request(std::string message): _message(message)
+Request::Request(std::string message): _message(message), _badRequset(false)
 {
 }
 
@@ -8,9 +8,15 @@ void Request::parseRequest()
 {
 	if (_message == "")
 		return ;
-	parseStartLine();
-	parseHeader();
-	parseBody();
+	try
+	{
+		parseStartLine();
+		parseHeader();
+	}
+	catch(int)
+	{
+		_badRequset = true;
+	}
 
 	// // 출력해보기
 	// std::cout << "Startline\n";
@@ -45,6 +51,8 @@ void Request::parseStartLine()
 		}
 		else
 			_startLine[i] = startLine;
+		if (_startLine[i] == "")
+			throw BADREQUEST;
 	}
 }
 
@@ -56,6 +64,8 @@ void Request::parseHeader()
 	std::string headerKey;
 	std::string headerValue;
 
+	if (_message == "")
+		return ;
 	while (1)
 	{
 		pos = _message.find("\r\n");
@@ -65,7 +75,11 @@ void Request::parseHeader()
 		// headerLine을 Key와 Value로 스플릿
 		posColon = headerLine.find(":");
 		if (posColon == headerLine.npos)
+		{
+			if (headerLine != "\r\n")
+				throw BADREQUEST;
 			break ;
+		}
 		headerKey = headerLine.substr(0, posColon);
 		if (headerLine[posColon + 1] == ' ')
 			posColon += 1;
@@ -104,17 +118,17 @@ void Request::parseBody()
 	}
 }
 
-std::string* Request::getStartLine(void)
+const std::string* Request::getStartLine(void) const
 {
 	return _startLine;
 }
 
-std::map<std::string, std::string> Request::getHeaders(void)
+const std::map<std::string, std::string> Request::getHeaders(void) const
 {
 	return _headers;
 }
 
-std::string Request::getBody(void)
+const std::string Request::getBody(void) const
 {
 	return _body;
 }

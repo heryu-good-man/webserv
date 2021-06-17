@@ -1,19 +1,20 @@
 #include "Location.hpp"
 
-const std::vector<std::string>	DEFAULT_METHOD;					// 변경 필요
-const std::string				DEFAULT_ROOT = "default root"; 	// 변경 필요
+const std::string METHODS[5] = { "GET", "HEAD", "POST", "PUT", "DELETE" };
+const std::vector<std::string>	DEFAULT_METHOD;
+const std::string				DEFAULT_ROOT = "/";
 const bool						DEFAULT_AUTOINDEX = false;
 const std::vector<std::string>	DEFAULT_INDEX_PAGES;
 const std::string				DEFAULT_CGI = "";
 const std::string				DEFAULT_CGI_PATH = "";
 const std::string				DEFAULT_RETURN = "";
 const bool						DEFAULT_UPLOAD_ENABLE = false;
-const std::string				DEFAULT_CLIENT_BODY_SIZE = "";
+const size_t					DEFAULT_CLIENT_BODY_SIZE = ULONG_MAX;
 
 Location::Location()
 	: _data()
 	, _path()
-	, _methods(DEFAULT_METHOD)
+	, _methods(METHODS, METHODS + 5)
 	, _root(DEFAULT_ROOT)
 	, _autoIndex(DEFAULT_AUTOINDEX)
 	, _indexPages(DEFAULT_INDEX_PAGES)
@@ -143,6 +144,7 @@ bool	Location::setMemberData(void)
 
 void	Location::_setMethod(const std::string& value)
 {
+	_methods.clear();
 	std::string tmpValue = value;
 	while (tmpValue.find(" ") != std::string::npos)
 	{
@@ -203,7 +205,12 @@ void	Location::_setUploadEnable(const std::string& value)
 
 void	Location::_setClientBodySize(const std::string& value)
 {
-	_clientBodySize = value;
+	size_t coefficient = strtoul(value.c_str(), NULL, 0);
+	_clientBodySize = coefficient;
+	if (value.back() == 'k' || value.back() == 'K')
+		_clientBodySize = coefficient * (1024);
+	if (value.back() == 'g' || value.back() == 'G')
+		_clientBodySize = coefficient * (1024 * 1024);
 }
 
 void	Location::print(void)
@@ -229,4 +236,59 @@ void	Location::print(void)
 		std::cout << *it << " ";
 	}
 	std::cout << "\n====================================\n";
+}
+
+const std::map<std::string, std::string>&	Location::getData() const
+{
+	return _data;
+}
+
+const std::string&							Location::getPath() const
+{
+	return _path;
+}
+
+const std::vector<std::string>&			Location::getMethods() const
+{
+	return _methods;
+}
+
+const std::string&							Location::getRoot() const
+{
+	return _root;
+}
+
+bool								Location::getAutoIndex() const
+{
+	return _autoIndex;
+}
+
+const std::vector<std::string>&			Location::getIndexPages() const
+{
+	return _indexPages;
+}
+
+const std::string&							Location::getCGI() const
+{
+	return _CGI;
+}
+
+const std::string&							Location::getCGIPath() const
+{
+	return _CGIPath;
+}
+
+const std::string&							Location::getReturn() const
+{
+	return _return;
+}
+
+bool								Location::getUploadEnable() const
+{
+	return _uploadEnable;
+}
+
+size_t							Location::getClientBodySize() const
+{
+	return _clientBodySize;
 }
