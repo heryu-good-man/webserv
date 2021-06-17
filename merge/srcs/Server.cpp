@@ -235,7 +235,6 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 
 	request.parseRequest();
 	std::string method = request.getStartLine()[0];
-	std::cout << "test\n" << std::endl;
 	// ㅇ겨ㅣ기는 감
 	if (method == "POST" || method == "PUT")
 	{
@@ -329,25 +328,34 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 	
 	if ((n = read(iter->getSocketFd(), buff, sizeof(buff))) != 0)
 	{
-		if (n == -1)
-			return _socketDisconnect(iter, readSet, writeSet);
-		std::cout << "read!!\n";
-		buff[n] = '\0';
-		iter->addStringToBuff(buff);
-		// \r\n\r\n이 있는지 확인
-		if ((pos = iter->getBuffer().find("\r\n\r\n")) != -1)
+		try
 		{
-			_setReadEnd(iter, pos);
+			if (n == -1)
+				return _socketDisconnect(iter, readSet, writeSet);
+			std::cout << "read!!\n";
+			buff[n] = '\0';
+			iter->addStringToBuff(buff);
+			// \r\n\r\n이 있는지 확인
+			if ((pos = iter->getBuffer().find("\r\n\r\n")) != -1)
+			{
+				_setReadEnd(iter, pos);
+			}
+			return 0;
 		}
-		return 0;
+		catch(int code)
+		{
+			std::cout << "err code : " << code << std::endl;
+			iter->clearBuffer();
+			iter->clearChunkBuffer();
+			return 0;
+		}
 	}
 	else
 	{
 		std::cout << "break!!\n";
 		_socketDisconnect(iter, readSet, writeSet);
+		return 1;
 	}
-	// 다시보기
-	return 1;
 }
 
 
@@ -356,6 +364,7 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 	Request request(iter->getBuffer());
 	if (iter->getBuffer().empty())
 		return 0;
+	// request.parseRequest();를 언제 해야할까??
 	request.parseRequest();
 	std::cout << "write!!\n";
 	Response tmp;
