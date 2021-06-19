@@ -38,10 +38,9 @@ public:
 	int								getListenSocket() const;
 	const Location&					getLocation(size_t index) const;
 	const std::vector<Location>&	getLocations(void) const;
-
-	bool					setMemberData(void);
-
-	void					print(void);
+	const std::string&				getErrorPage(int code) const;
+	size_t							getPort(void) const;
+	const std::string&				getHost(void) const;
 
 	void					setListenSocket(void);
 	void					setAddress(void);
@@ -65,12 +64,11 @@ private:
 	std::vector<Socket> _sockets;
 
 	// config data
-	std::map<std::string, std::string>	_data;
 	std::vector<Location>				_locations;
 	std::string							_host;
 	size_t								_port;
 	std::string							_serverName;
-	std::string							_errorPage;
+	std::map<std::string, std::string>	_errorPages;
 
 	Key		_getKeyNumber(const std::string& key) const;
 	void	_setListen(const std::string& value);
