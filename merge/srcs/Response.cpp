@@ -116,6 +116,14 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 	_writeBody();
 }
 
+bool	Response::_isCGI(const Location& location, const std::string& CGIExtention)
+{
+	if (location.getCGI() == CGIExtention)
+		return true;
+	else
+		return false;
+}
+
 void    Response::response(const Server& server, const Request& request)
 {
 	try
@@ -123,11 +131,16 @@ void    Response::response(const Server& server, const Request& request)
 		// if (request.isBadRequest() == true)
 		//  throw 400 ; // 400 bad request
 		_isValidHTTPVersion(request.getHTTPVersion());
-		Location location = _getMatchingLocation(server, request.getURI());
+		std::string URI = request.getURI();
+		Location location = _getMatchingLocation(server, URI);
 		std::string requestMethod = _isAllowedMethod(location, request.getMethod());
-		std::string realPath = _getRealPath(location, request.getURI());
+		std::string realPath = _getRealPath(location, URI);
+		bool isCGI = _isCGI(location, request.getCGIextension());
+		// request안에 있는 _cgi_extension을 location 블락 안에 있는 CGI랑 비교하는 게 필요할듯
 		if (location.getReturn() != "")
 			_responseRedirect(location);
+		else if ((requestMethod == "GET" || requestMethod == "POST") && isCGI == true)
+			_responseWithCGI(location, realPath, request);
 		else if (requestMethod == "GET")
 			_responseGET(location, realPath, request, true);
 		else if (requestMethod == "HEAD")
@@ -498,3 +511,78 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 		return (std::string());
 }
 
+
+void		Response::_responseWithCGI(const Location& location, const std::string& path, const Request& request)
+{
+	std::vector<std::string>	envVal;
+	char **env;
+
+	envVal.push_back("REQUEST_METHOD=" + request.getMethod());
+	envVal.push_back("SERVER_PROTOCOL=HTTP/1.1");
+	envVal.push_back("GATEWAY_INTERFACE=CGI/1.1");
+	//get일 때만
+	if (request.getMethod() == "GET")
+	{
+		env = new char*[10];
+		envVal.push_back("QUERY_STRING=" + request.getQueryString());
+		std::cout << "query string: " << request.getQueryString() << std::endl;
+	}
+	// post 일 때만
+	else
+	{
+		env = new char*[11];
+		size_t size = request.getBody().size();
+		envVal.push_back("CONTENT_LENGTH=" + std::to_string(size));
+		envVal.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
+	}
+	std::string path3 = path.substr(0, path.find("?"));
+	std::string path2 = "/Users/mijeong/subject/webserv/merge" + path3.substr(1);
+	envVal.push_back("PATH_INFO=" + path2);
+	envVal.push_back("SCRIPT_FILENAME=" + path2);
+	envVal.push_back("PATH_TRANSLATED=" + path2);
+	envVal.push_back("SCRIPT_NAME=" + path2);
+	envVal.push_back("REQUEST_URI=" + path2);
+	envVal.push_back("REDIRECT_STATUS=200");
+
+	for (size_t i = 0; i < envVal.size(); i++)
+	{
+		env[i] = strdup(envVal[i].c_str());
+		std::cout << "env : " << env[i] << std::endl;
+	}
+	env[envVal.size()] = NULL;
+
+	int fd[2];
+    pipe(fd);
+	int originfd[2];
+	originfd[1] = dup(1);
+	originfd[0] = dup(0);
+    // int tmp_fd;
+    pid_t pid = fork();
+    if (pid == 0)
+    {
+        close(fd[1]);
+        dup2(fd[0], 0);
+        close(fd[0]);
+        int file_fd = open("./tmp.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+        dup2(file_fd, 1);
+        close(file_fd);
+		std::cout << location.getCGIPath().c_str() << std::endl;
+		execve(location.getCGIPath().c_str(), NULL, env);
+    }
+    else
+    {
+		if (request.getMethod() == "GET")
+			write(fd[1], request.getQueryString().c_str(), request.getQueryString().size());
+		if (request.getMethod() == "POST")
+			write(fd[1], request.getBody().c_str(), request.getBody().size());
+		// if (request.getMethod() == "GET")
+        // 	write(fd[1], request.getQueryString().c_str(), request.getQueryString().size());
+		// if (request.getMethod() == "POST")
+        // 	write(fd[1], request.getBody().c_str(), request.getBody().size());
+        close(fd[1]);
+        close(fd[0]);
+        waitpid(-1, NULL, 0);
+    }
+	dup2(originfd[1], 1);
+	dup2(originfd[0], 0);
+}

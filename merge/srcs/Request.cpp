@@ -1,6 +1,6 @@
 #include "Request.hpp"
 
-Request::Request(std::string message): _message(message), _badRequset(false)
+Request::Request(std::string message): _message(message),  _queryString(""), _cgi_extension(""), _badRequset(false)
 {
 }
 
@@ -53,6 +53,15 @@ void Request::parseStartLine()
 		if (_startLine[i] == "")
 			throw BADREQUEST;
 	}
+	size_t posCGI;
+
+	if ((posCGI = _startLine[1].find(".bla")) != _startLine[1].npos)
+		_cgi_extension = _startLine[1].substr(posCGI, 4);
+	else if ((posCGI = _startLine[1].find(".php")) != _startLine[1].npos)
+		_cgi_extension = _startLine[1].substr(posCGI, 4);
+
+	if (_startLine[1].find("?") != _startLine[1].npos)
+		_queryString = _startLine[1].substr(_startLine[1].find("?") + 1);
 }
 
 void Request::parseHeader()

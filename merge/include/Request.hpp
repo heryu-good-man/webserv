@@ -33,6 +33,15 @@ public:
 	{
 		return (getStartLine()[2]);
 	}
+	// 만들기.
+	const std::string getCGIextension(void) const
+	{
+		return _cgi_extension;
+	}
+	const std::string getQueryString(void) const
+	{
+		return _queryString;
+	}
 	bool isBadRequest(void) const
 	{
 		return _badRequset;
@@ -44,6 +53,8 @@ public:
 private:
 	std::string _message;
 	std::string _startLine[3];
+	std::string _queryString;
+	std::string _cgi_extension;
 	std::map<std::string, std::string> _headers;
 	std::string _body;
 	bool		_badRequset;
