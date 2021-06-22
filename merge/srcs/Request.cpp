@@ -1,5 +1,10 @@
 #include "Request.hpp"
 
+Request::Request()
+{
+	
+}
+
 Request::Request(const std::string& message): _message(message),  _queryString(""), _cgi_extension(""), _badRequset(false)
 {
 }

@@ -508,10 +508,10 @@ void		Response::_responseWithCGI(const Location& location, const std::string& pa
 {
 	std::cout << "..cgi..." << std::endl;
 	CGI	cgi;
-
+	std::cout << "before cgi" << std::endl;
 	cgi.setEnv(request, path);
 	cgi.execCGI(request, location);
-
+	std::cout << "before open" << std::endl;
 	int fd = open("./tmp.txt", O_RDONLY);
 	std::ostringstream oss;
 	char buf[30001];
@@ -527,8 +527,13 @@ void		Response::_responseWithCGI(const Location& location, const std::string& pa
 	// std::cout << "=====================" << std::endl;
 	std::cout << "1" << std::endl;
 	size_t findCRLF = fileContent.find("\r\n\r\n");
-	size_t contentLength = fileContent.size() - (findCRLF + 4);
 	std::string contentBody = fileContent.substr(findCRLF + 4);
+	size_t contentLength = fileContent.size() - (findCRLF + 4);
+
+	std::cout << "findCRLF: " << findCRLF << std::endl;
+	std::cout << "1. " << fileContent.size() - (findCRLF + 4) << std::endl;
+	std::cout << "2. " << contentBody.size() << std::endl;
+
 	std::string startLine = "HTTP/1.1 200 OK\r\n";
 	std::string header = fileContent.substr(0, findCRLF);
 	std::cout << "2" << std::endl;

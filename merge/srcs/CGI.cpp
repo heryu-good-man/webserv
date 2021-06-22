@@ -64,7 +64,6 @@ void    CGI::execCGI(const Request& request, const Location& location)
     int fd[2];
     pipe(fd);
 	int originfd[2];
-	originfd[1] = dup(1);
 	originfd[0] = dup(0);
     // int tmp_fd;
     pid_t pid = fork();
