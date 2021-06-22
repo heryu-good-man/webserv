@@ -74,7 +74,9 @@ void    CGI::execCGI(const Request& request, const Location& location)
         close(fd[1]);
         dup2(fd[0], 0);
         close(fd[0]);
+        // std::cout << "before open\n";
         int file_fd = open("./tmp.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+        // std::cout << "after open\n";
         dup2(file_fd, 1);
         close(file_fd);
 		execve(location.getCGIPath().c_str(), NULL, _env);
@@ -86,6 +88,7 @@ void    CGI::execCGI(const Request& request, const Location& location)
         {
             size_t rest = request.getBody().size();
             size_t writtenSize = 0;
+            // std::cout << "before cgi write\n";
             while (rest != 0)
             {
                 size_t writeSize = rest < 65530 ? rest : 65530;
@@ -97,6 +100,7 @@ void    CGI::execCGI(const Request& request, const Location& location)
                 rest -= tmpSize;
                 writtenSize += tmpSize;
             }
+            // std::cout << "after cgi write\n";
         }
         close(fd[1]);
         close(fd[0]);

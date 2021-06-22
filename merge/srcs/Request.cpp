@@ -5,6 +5,7 @@ Request::Request()
 
 }
 
+// 재할당 수정@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 Request::Request(const std::string& message): _message(message),  _queryString(""), _cgi_extension(""), _badRequset(false)
 {
 	_body = _message.substr(_message.find("\r\n\r\n") + 4);
@@ -45,6 +46,7 @@ void Request::parseStartLine()
 
 	pos = _message.find("\r\n");
 	startLine = _message.substr(0, pos);
+	// 재할당 수정@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 	_message = _message.substr(pos + 2);
 	// startLine을 공백 단위로 스플릿
 	for (size_t i = 0; i < 3; i++)
@@ -86,6 +88,7 @@ void Request::parseHeader()
 		pos = _message.find("\r\n");
 		// headerLine;
 		headerLine = _message.substr(0, pos);
+		// 재할당 수정@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 		_message = _message.substr(pos + 2);
 		// headerLine을 Key와 Value로 스플릿
 		posColon = headerLine.find(":");
