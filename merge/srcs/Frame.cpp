@@ -45,7 +45,7 @@ int main(int argc, char** argv, char** envp)
 			std::cout << "bind 실패!!\n";
 			return -1;
 		}
-		if (i->listenSelf(5) == -1)
+		if (i->listenSelf(1000) == -1)
 		{
 			std::cout << "listen 실패!!\n";
 			return -1;

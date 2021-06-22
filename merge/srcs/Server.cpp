@@ -391,6 +391,7 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 		return 0;
 	// request.parseRequest();를 언제 해야할까??
 	request.parseRequest();
+	
 	Response tmp;
 	tmp.response(*this, request);
 	// std::cout << "============================RESPONSE BUFFER=============================\n";
@@ -402,19 +403,23 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 	size_t writtenSize = 0;
 	while (rest > 0)
 	{
-		std::cout << "rest: " << rest << "\n";
 		size_t writeSize = rest < 65530 ? rest : 65530;
 		int tmpSize = 0;
 		if ((tmpSize = write(iter->getSocketFd(), tmp.getResponse().c_str() + writtenSize, writeSize)) <= 0)
 		{
+			if (tmpSize == -1)
+				continue ;
 			std::cout << *(tmp.getResponse().c_str() + writtenSize) << std::endl;
 			std::cout << tmpSize << ":" << writeSize << std::endl;
 			std::cout << errno << std::endl;
 			std::cout << "ssibal" << std::endl;
-			return _socketDisconnect(iter, readSet, writeSet);
+			// return _socketDisconnect(iter, readSet, writeSet);
+			(void)readSet;
+			(void)writeSet;
 		}
 		std::cout << *(tmp.getResponse().c_str() + writtenSize) << std::endl;
 		std::cout << tmpSize << ":" << writeSize << std::endl;
+		std::cout << "rest: " << rest << "\n";
 		rest -= tmpSize;
 		writtenSize += tmpSize;
 	}

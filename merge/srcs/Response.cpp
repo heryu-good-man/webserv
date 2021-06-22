@@ -118,7 +118,9 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 
 bool	Response::_isCGI(const Location& location, const std::string& CGIExtention)
 {
-	if (location.getCGI() == CGIExtention)
+	if (CGIExtention.empty())
+		return false;
+	else if (location.getCGI() == CGIExtention)
 		return true;
 	else
 		return false;
@@ -506,6 +508,8 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 
 void		Response::_responseWithCGI(const Location& location, const std::string& path, const Request& request)
 {
+	// if (_getType(path) != TYPE_FILE)
+	// 	throw 404;
 	std::cout << "..cgi..." << std::endl;
 	CGI	cgi;
 	std::cout << "before cgi" << std::endl;
@@ -526,10 +530,13 @@ void		Response::_responseWithCGI(const Location& location, const std::string& pa
 	// remove("./tmp.txt");
 	std::string fileContent = oss.str();
 	// std::cout << "=====================" << std::endl;
-	std::cout << "1" << std::endl;
+	std::cout << "111" << std::endl;
 	size_t findCRLF = fileContent.find("\r\n\r\n");
+	std::cout << "222" << std::endl;
 	std::string contentBody = fileContent.substr(findCRLF + 4);
+	std::cout << "333" << std::endl;
 	size_t contentLength = fileContent.size() - (findCRLF + 4);
+	std::cout << "444" << std::endl;
 
 	std::cout << "findCRLF: " << findCRLF << std::endl;
 	std::cout << "1. " << fileContent.size() - (findCRLF + 4) << std::endl;
@@ -545,7 +552,7 @@ void		Response::_responseWithCGI(const Location& location, const std::string& pa
 	_ret += "Content-Length: " + std::to_string(contentLength);
 	_ret += "\r\n\r\n";
 	_ret += contentBody;
-	std::cout << "3" << std::endl;
+	std::cout << "end withCGI" << std::endl;
 	// make response
 	// header
 	// status check

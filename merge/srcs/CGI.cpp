@@ -35,12 +35,12 @@ void    CGI::setEnv(const Request& request, const std::string path)
 	envVal.push_back("GATEWAY_INTERFACE=CGI/1.1");
 	if (request.getMethod() == "GET") // get
 	{
-		_env = new char*[11];
+		_env = new char*[12];
 		envVal.push_back("QUERY_STRING=" + request.getQueryString());
 	}
 	else // post
 	{
-		_env = new char*[12];
+		_env = new char*[13];
 		size_t size = request.getBody().size();
 		envVal.push_back("CONTENT_LENGTH=" + std::to_string(size));
 		envVal.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
@@ -53,6 +53,7 @@ void    CGI::setEnv(const Request& request, const std::string path)
 	envVal.push_back("SCRIPT_NAME=" + path2);
 	envVal.push_back("REQUEST_URI=" + path2);
 	envVal.push_back("REDIRECT_STATUS=200");
+    envVal.push_back("HTTP_X_SECRET_HEADER_FOR_TEST=1");
 
 	for (size_t i = 0; i < envVal.size(); i++)
 		_env[i] = strdup(envVal[i].c_str());
@@ -77,6 +78,7 @@ void    CGI::execCGI(const Request& request, const Location& location)
         dup2(file_fd, 1);
         close(file_fd);
 		execve(location.getCGIPath().c_str(), NULL, _env);
+        exit(1);
     }
     else
     {
@@ -100,7 +102,6 @@ void    CGI::execCGI(const Request& request, const Location& location)
         close(fd[0]);
         waitpid(-1, NULL, 0);
     }
-    std::cout << "3" << std::endl;
 	dup2(originfd[1], 1);
 	dup2(originfd[0], 0);
 	close(originfd[1]);
@@ -114,7 +115,6 @@ void    CGI::_clearEnv(void)
 	while (_env[i])
     {
 		free(_env[i]);
-        std::cout << "test???\n";
         ++i;
     }
 	delete[] _env;
