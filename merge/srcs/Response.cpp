@@ -71,7 +71,10 @@ void	Response::_makeFile(const std::string& path, const Request& req)
 void	Response::_responsePUTorPOST(const Location& location, const std::string& path, const Request& request)
 {
 	if (request.getBody().size() > location.getClientBodySize())
+	{
+		std::cout << "body size: " << request.getBody().size() << std::endl;
 		throw 413;
+	}
 	if (location.getUploadEnable() == false)
 		throw 403;
 	

@@ -4,6 +4,7 @@ Socket::Socket()
 {
 	_readChecker = false;
 	_bodyLen = 0;
+	_endOfHeader = 0;
 }
 
 Socket::Socket(int fd)
@@ -14,6 +15,7 @@ Socket::Socket(int fd)
 	_bodyLen = 0;
 	_startIndex = 0;
 	_chunkedBuff = "";
+	_endOfHeader = 0;
 }
 
 Socket::Socket(const Socket &from)
@@ -35,6 +37,7 @@ Socket		&Socket::operator=(const Socket &rvalue)
 		_bodyLen = rvalue._bodyLen;
 		_chunkedBuff = rvalue._chunkedBuff;
 		_startIndex = rvalue._startIndex;
+		_endOfHeader = rvalue._endOfHeader;
 	}
 	return *this;
 }
@@ -61,6 +64,10 @@ int			Socket::getBodyLen() const
 	return _bodyLen;
 }
 
+int			Socket::getEndOfHeader() const
+{
+	return _endOfHeader;
+}
 
 // ***** memberFunction ******
 void		Socket::addStringToBuff(char *addBuff)

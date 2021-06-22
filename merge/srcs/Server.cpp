@@ -198,8 +198,10 @@ int	Server::acceptSocket(fd_set *readSet, fd_set *writeSet)
 void	Server::checkSet(fd_set *readSet, fd_set *writeSet, fd_set *copyr, fd_set *copyw)
 {
 	std::vector<Socket>::iterator iter = _sockets.begin();
+	// int i = 0;
 	for (; iter != _sockets.end(); iter++)
 	{
+		// std::cout << i++ << "번째 소켓!!\n";
 		if (FD_ISSET(iter->getSocketFd(), copyr))
 		{
 			if (_checkReadSetAndExit(iter, readSet, writeSet))
@@ -229,7 +231,7 @@ int	Server::_socketDisconnect(std::vector<Socket>::iterator iter, fd_set *readSe
 	return 1;
 }
 
-void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
+void	Server::_setReadEnd(std::vector<Socket>::iterator iter)
 {
 	std::string method = _request.getStartLine()[0];
 	if (method == "POST" || method == "PUT")
@@ -255,7 +257,7 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 				buff[n] = '\0';
 				iter->addStringToBuff(buff);
 				// 내가 원하는 만큼 버퍼에 가득 찼다
-				if (iter->getBuffer().size() - (pos + 4) <= static_cast<size_t>(iter->getBodyLen()))
+				if (iter->getBuffer().size() - (iter->getStartIndex()) <= static_cast<size_t>(iter->getBodyLen()))
 					iter->setReadChecker(true);
 			}
 		}
@@ -263,53 +265,29 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 		{
 			// chunked 체크해야한다.
 			// 여기서 바로 읽어버리자.
-			if ((n = iter->getBuffer().find("\r\n\r\n", pos + 4)) != -1)
+			while ((n = iter->getBuffer().find("\r\n", iter->getStartIndex())) != -1)
 			{
-				// std::cout << "before chunk test\n";
-				// 딱 청크드 데이터만 있음
-				std::string tmpBuffer;
-
-				tmpBuffer = iter->getBuffer().substr(pos + 4, n);
-				int endIndex;
-				while (1)
+				std::string oneLine;
+				int chunkSizeStart = iter->getStartIndex();
+				oneLine = iter->getBuffer().substr(chunkSizeStart, n - chunkSizeStart);
+				std::stringstream ss;
+				ss << std::hex << oneLine;
+				int chunkSize;
+				ss >> chunkSize;
+				if (chunkSize == 0)
 				{
-					std::string oneLine;
-					endIndex = tmpBuffer.find("\r\n", iter->getStartIndex());
-					// std::cout << "getChunkedBuff : " << tmpBuffer << std::endl;
-					// \r\n이 없다?? 그럼 
-					if (endIndex == -1)
-						break ;
-					// 한줄 자르고
-					int	chunckSize;
-					// std::cout << "*************startIndex : " << iter->getStartIndex() << std::endl << "endIndex : " << endIndex << std::endl;
-					oneLine = tmpBuffer.substr(iter->getStartIndex(), endIndex - iter->getStartIndex());
-					std::stringstream ss2;
-					ss2 << std::hex << oneLine;
-					// std::cout << "oneLine" << oneLine;
-					ss2 >> chunckSize;
-					// std::cout << "chunckSize: " << chunckSize << std::endl;
-					if (ss2.fail())
-						throw 400;
-					// 일단 숫자 0다음에 \r\n을 한번만 받아도 종료되게끔 만들겠습니다.
-					if (chunckSize == 0)
-					{
-						// std::cout << "start game\n";
-						iter->setBuff(iter->getBuffer().substr(0, pos + 4) + iter->getChunkedBuff());
-						iter->setReadChecker(true);
-						iter->clearChunkBuffer();
-						// std::cout << "end game\n";
-						return ;
-					}
-					// endIndex에 2를 더해야 읽은 문자 갯수에 \r\n을 포함가능하다. 그리고 세어야할 문자열 뒤에 \r\n은 빼고 세어야 하기 때문에 -2를 해줬다.
-					// 더 읽어야함.
-					// if (chunckSize > static_cast<int>(tmpBuffer.size()) - (endIndex + 2) - 2)
-					// 	break ;
-					// 다 읽었으면 chunkSize만큼 잘라내서 버퍼에 저장하자.
-					iter->addChunkedBuff(tmpBuffer.substr(endIndex + 2, chunckSize));
-					// startindex잡는건 한줄 읽고 나서.
-					iter->setStartIndex(endIndex + chunckSize + 4);
+					iter->setBuff(iter->getBuffer().substr(0, iter->getEndOfHeader()) + iter->getChunkedBuff());
+					iter->setReadChecker(true);
+					std::cout << "get buffer size!!!!!!!!!!!: " << iter->getChunkedBuff().size() << std::endl;
+					iter->clearChunkBuffer();
 				}
-				// std::cout << "after chunk test\n";
+				else if (iter->getBuffer().find("\r\n", n + 2) != (size_t)-1)
+				{
+					iter->addChunkedBuff(iter->getBuffer().substr(n + 2, chunkSize));
+					iter->setStartIndex(n + chunkSize + 4);
+				}
+				else
+					break ;
 			}
 		}
 	}
@@ -339,7 +317,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 			if (pos != -1 && _check == true)
 			{
 				// std::cout << "reading...\n";
-				_setReadEnd(iter, pos);
+				_setReadEnd(iter);
 			}
 			else if (pos != -1 && _check == false)
 			{
@@ -347,7 +325,9 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 				_request.parseRequest();
 				// std::cout << "before read\n";
 				_check = true;
-				_setReadEnd(iter, pos);
+				iter->setStartIndex(pos + 4);
+				iter->setEndOfHeader(pos + 4);
+				_setReadEnd(iter);
 				// if (_request.getMethod() == "POST" || _request.getMethod() == "PUT")
 			}
 			return 0;
