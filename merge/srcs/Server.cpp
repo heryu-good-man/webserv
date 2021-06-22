@@ -338,7 +338,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 	int		pos = 0;
 	
 	if ((n = read(iter->getSocketFd(), buff, sizeof(buff))) != 0)
-	{std::cout << "read" << std::endl;
+	{
 		try
 		{
 			if (n == -1)
@@ -361,7 +361,6 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 				_setReadEnd(iter, pos);
 				// if (_request.getMethod() == "POST" || _request.getMethod() == "PUT")
 			}
-			std::cout << "read end..." << std::endl;
 			return 0;
 		}
 		catch(int code)
@@ -401,18 +400,23 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 
 	size_t rest = tmp.getResponse().size();
 	size_t writtenSize = 0;
-	while (rest != 0)
+	while (rest > 0)
 	{
 		std::cout << "rest: " << rest << "\n";
 		size_t writeSize = rest < 65530 ? rest : 65530;
-		if ((write(iter->getSocketFd(), tmp.getResponse().c_str() + writtenSize, writeSize)) == -1)
-		{
-			std::cout << errno << std::endl;
-			std::cout << "ssibal" << std::endl;
-			return _socketDisconnect(iter, readSet, writeSet);
-		}
-		rest -= writeSize;
-		writtenSize += writeSize;
+		int tmpSize = 0;
+		tmpSize = write(iter->getSocketFd(), tmp.getResponse().c_str() + writtenSize, writeSize);
+		// {
+		// 	std::cout << *(tmp.getResponse().c_str() + writtenSize) << std::endl;
+		// 	std::cout << tmpSize << ":" << writeSize << std::endl;
+		// 	std::cout << errno << std::endl;
+		// 	std::cout << "ssibal" << std::endl;
+		// 	return _socketDisconnect(iter, readSet, writeSet);
+		// }
+		std::cout << *(tmp.getResponse().c_str() + writtenSize) << std::endl;
+		std::cout << tmpSize << ":" << writeSize << std::endl;
+		rest -= tmpSize;
+		writtenSize += tmpSize;
 	}
 
 	// if (write(iter->getSocketFd(), tmp.getResponse().c_str(), tmp.getResponse().size()) != (ssize_t)tmp.getResponse().size())
