@@ -7,6 +7,8 @@ Request::Request()
 
 Request::Request(const std::string& message): _message(message),  _queryString(""), _cgi_extension(""), _badRequset(false)
 {
+	_body = _message.substr(_message.find("\r\n\r\n") + 4);
+	_message = _message.substr(0, _message.find("\r\n\r\n"));
 }
 
 void Request::parseRequest()
@@ -15,7 +17,7 @@ void Request::parseRequest()
 	{
 		parseStartLine();
 		parseHeader();
-		parseBody();
+		// parseBody();
 	}
 	catch(int)
 	{
@@ -133,7 +135,7 @@ void Request::parseBody()
 	// 			break ;
 	// 	}
 	// }
-	_body = _message;
+	// _body = _message;
 }
 
 const std::string* Request::getStartLine(void) const
@@ -141,12 +143,12 @@ const std::string* Request::getStartLine(void) const
 	return _startLine;
 }
 
-const std::map<std::string, std::string> Request::getHeaders(void) const
+const std::map<std::string, std::string>& Request::getHeaders(void) const
 {
 	return _headers;
 }
 
-const std::string Request::getBody(void) const
+const std::string& Request::getBody(void) const
 {
 	return _body;
 }
