@@ -405,14 +405,14 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 		std::cout << "rest: " << rest << "\n";
 		size_t writeSize = rest < 65530 ? rest : 65530;
 		int tmpSize = 0;
-		tmpSize = write(iter->getSocketFd(), tmp.getResponse().c_str() + writtenSize, writeSize);
-		// {
-		// 	std::cout << *(tmp.getResponse().c_str() + writtenSize) << std::endl;
-		// 	std::cout << tmpSize << ":" << writeSize << std::endl;
-		// 	std::cout << errno << std::endl;
-		// 	std::cout << "ssibal" << std::endl;
-		// 	return _socketDisconnect(iter, readSet, writeSet);
-		// }
+		if ((tmpSize = write(iter->getSocketFd(), tmp.getResponse().c_str() + writtenSize, writeSize)) <= 0)
+		{
+			std::cout << *(tmp.getResponse().c_str() + writtenSize) << std::endl;
+			std::cout << tmpSize << ":" << writeSize << std::endl;
+			std::cout << errno << std::endl;
+			std::cout << "ssibal" << std::endl;
+			return _socketDisconnect(iter, readSet, writeSet);
+		}
 		std::cout << *(tmp.getResponse().c_str() + writtenSize) << std::endl;
 		std::cout << tmpSize << ":" << writeSize << std::endl;
 		rest -= tmpSize;
