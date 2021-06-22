@@ -510,6 +510,7 @@ void		Response::_responseWithCGI(const Location& location, const std::string& pa
 	CGI	cgi;
 	std::cout << "before cgi" << std::endl;
 	cgi.setEnv(request, path);
+	std::cout << "zzzz" << std::endl;
 	cgi.execCGI(request, location);
 	std::cout << "before open" << std::endl;
 	int fd = open("./tmp.txt", O_RDONLY);

@@ -86,7 +86,6 @@ int main(int argc, char** argv, char** envp)
 			}
 			// 입력 버퍼에 들어온게 있는지 확인해본다.
 			// && 출력할게 있는지 확인한다.
-			std::cout << "before checkSet" << std::endl;
 			iter->checkSet(&readSet, &writeSet, &copyRead, &copyWrite);
 			usleep(10);
 		}

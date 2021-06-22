@@ -30,7 +30,7 @@ public:
 	{
 		return _startIndex;
 	}
-	std::string	getChunkedBuff() const
+	const std::string&	getChunkedBuff() const
 	{
 		return _chunkedBuff;
 	}
@@ -41,9 +41,9 @@ public:
 	{
 		_startIndex = num;
 	}
-	void		setChunkedBuff(const std::string& str)
+	void		addChunkedBuff(const std::string& str)
 	{
-		_chunkedBuff = str;
+		_chunkedBuff += str;
 	}
 	void		setBuff(const std::string& str)
 	{

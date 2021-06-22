@@ -65,6 +65,7 @@ void    CGI::execCGI(const Request& request, const Location& location)
     pipe(fd);
 	int originfd[2];
 	originfd[0] = dup(0);
+    originfd[1] = dup(1);
     // int tmp_fd;
     pid_t pid = fork();
     if (pid == 0)
@@ -85,7 +86,7 @@ void    CGI::execCGI(const Request& request, const Location& location)
             size_t writtenSize = 0;
             while (rest != 0)
             {
-                size_t writeSize = rest < 50000 ? rest : 50000;
+                size_t writeSize = rest < 65530 ? rest : 65530;
                 write(fd[1], request.getBody().c_str() + writtenSize, writeSize);
                 rest -= writeSize;
                 writtenSize += writeSize;
@@ -95,6 +96,7 @@ void    CGI::execCGI(const Request& request, const Location& location)
         close(fd[0]);
         waitpid(-1, NULL, 0);
     }
+    std::cout << "3" << std::endl;
 	dup2(originfd[1], 1);
 	dup2(originfd[0], 0);
 	close(originfd[1]);
@@ -108,6 +110,7 @@ void    CGI::_clearEnv(void)
 	while (_env[i])
     {
 		free(_env[i]);
+        std::cout << "test???\n";
         ++i;
     }
 	delete[] _env;

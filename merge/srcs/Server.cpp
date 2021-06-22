@@ -222,7 +222,6 @@ void	Server::checkSet(fd_set *readSet, fd_set *writeSet, fd_set *copyr, fd_set *
 			}
 		}
 	}
-	std::cout << "After checkSet" << std::endl;
 }
 
 // priavate
@@ -305,9 +304,11 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 					// 일단 숫자 0다음에 \r\n을 한번만 받아도 종료되게끔 만들겠습니다.
 					if (chunckSize == 0)
 					{
+						std::cout << "start game\n";
 						iter->setBuff(iter->getBuffer().substr(0, pos + 4) + iter->getChunkedBuff());
 						iter->setReadChecker(true);
 						iter->clearChunkBuffer();
+						std::cout << "end game\n";
 						return ;
 					}
 					// endIndex에 2를 더해야 읽은 문자 갯수에 \r\n을 포함가능하다. 그리고 세어야할 문자열 뒤에 \r\n은 빼고 세어야 하기 때문에 -2를 해줬다.
@@ -315,7 +316,7 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 					if (chunckSize > static_cast<int>(tmpBuffer.size()) - (endIndex + 2) - 2)
 						break ;
 					// 다 읽었으면 chunkSize만큼 잘라내서 버퍼에 저장하자.
-					iter->setChunkedBuff(iter->getChunkedBuff() + tmpBuffer.substr(endIndex + 2, chunckSize));
+					iter->addChunkedBuff(tmpBuffer.substr(endIndex + 2, chunckSize));
 					// startindex잡는건 한줄 읽고 나서.
 					iter->setStartIndex(endIndex + chunckSize + 4);
 				}
@@ -397,11 +398,29 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 	// std::cout << tmp.getResponse() << std::endl;
 	// std::cout << "========================================================\n";
 	std::cout << "...write..." << std::endl;
-	if (write(iter->getSocketFd(), tmp.getResponse().c_str(), tmp.getResponse().size()) == -1)
+
+	size_t rest = tmp.getResponse().size();
+	size_t writtenSize = 0;
+	while (rest != 0)
 	{
-		return _socketDisconnect(iter, readSet, writeSet);
+		std::cout << "rest: " << rest << "\n";
+		size_t writeSize = rest < 65530 ? rest : 65530;
+		if ((write(iter->getSocketFd(), tmp.getResponse().c_str() + writtenSize, writeSize)) == -1)
+		{
+			std::cout << errno << std::endl;
+			std::cout << "ssibal" << std::endl;
+			return _socketDisconnect(iter, readSet, writeSet);
+		}
+		rest -= writeSize;
+		writtenSize += writeSize;
 	}
-	std::cout << "...end write1..." << std::endl;
+
+	// if (write(iter->getSocketFd(), tmp.getResponse().c_str(), tmp.getResponse().size()) != (ssize_t)tmp.getResponse().size())
+	// {
+	// 	std::cout << "???" << std::endl;
+	// 	return _socketDisconnect(iter, readSet, writeSet);
+	// }
+	// std::cout << "...end write1..." << std::endl;
 	// char buf[] = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\nContent-Length: 100\r\nDate: Sun, 13 Jun 2021\r\n\r\nHello World AAA!!!\r\n";
 	// write(iter->getSocketFd(), buf, strlen(buf));
 	iter->setReadChecker(false);
