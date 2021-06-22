@@ -11,6 +11,7 @@
 # include <map>
 # include "Request.hpp"
 # include "Location.hpp"
+# include "CGI.hpp"
 
 # define TYPE_FILE	1
 # define TYPE_DIR	2

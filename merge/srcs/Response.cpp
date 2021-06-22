@@ -348,26 +348,18 @@ int		Response::_getTypeMIME(const std::string& fileName) const
 
 void    Response::_setBodyFromFile(const std::string& fileName)
 {
-	std::ifstream ifs;
-	ifs.open(fileName, std::ios_base::in);
-	if (!ifs.is_open())
-		throw 500;
+	int fd = open(fileName.c_str(), O_RDONLY);
 	std::ostringstream oss;
-	char buf[1024];
-	while (1)
+	char buf[1025];
+	int ret = 0;
+	while ((ret = read(fd, buf, 1024)) > 0)
 	{
-		ifs.getline(buf, 1024);
-		if (ifs.fail())
-		{
-			ifs.clear();
-			break ;
-		}
+		buf[ret] = '\0';
 		oss << buf;
-		if (!ifs.eof())
-			oss << "\r\n";
 	}
-	ifs.close();
+	close(fd);
 	_body = oss.str();
+
 	if (_getTypeMIME(fileName) == HTML)
 		_contentType = "text/html";
 	else
@@ -514,75 +506,45 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 
 void		Response::_responseWithCGI(const Location& location, const std::string& path, const Request& request)
 {
-	std::vector<std::string>	envVal;
-	char **env;
+	std::cout << "..cgi..." << std::endl;
+	CGI	cgi;
 
-	envVal.push_back("REQUEST_METHOD=" + request.getMethod());
-	envVal.push_back("SERVER_PROTOCOL=HTTP/1.1");
-	envVal.push_back("GATEWAY_INTERFACE=CGI/1.1");
-	//get일 때만
-	if (request.getMethod() == "GET")
-	{
-		env = new char*[10];
-		envVal.push_back("QUERY_STRING=" + request.getQueryString());
-		std::cout << "query string: " << request.getQueryString() << std::endl;
-	}
-	// post 일 때만
-	else
-	{
-		env = new char*[11];
-		size_t size = request.getBody().size();
-		envVal.push_back("CONTENT_LENGTH=" + std::to_string(size));
-		envVal.push_back("CONTENT_TYPE=application/x-www-form-urlencoded");
-	}
-	std::string path3 = path.substr(0, path.find("?"));
-	std::string path2 = "/Users/mijeong/subject/webserv/merge" + path3.substr(1);
-	envVal.push_back("PATH_INFO=" + path2);
-	envVal.push_back("SCRIPT_FILENAME=" + path2);
-	envVal.push_back("PATH_TRANSLATED=" + path2);
-	envVal.push_back("SCRIPT_NAME=" + path2);
-	envVal.push_back("REQUEST_URI=" + path2);
-	envVal.push_back("REDIRECT_STATUS=200");
+	cgi.setEnv(request, path);
+	cgi.execCGI(request, location);
 
-	for (size_t i = 0; i < envVal.size(); i++)
+	int fd = open("./tmp.txt", O_RDONLY);
+	std::ostringstream oss;
+	char buf[30001];
+	int ret = 0;
+	while ((ret = read(fd, buf, 30000)) > 0)
 	{
-		env[i] = strdup(envVal[i].c_str());
-		std::cout << "env : " << env[i] << std::endl;
+		buf[ret] = '\0';
+		oss << buf;
 	}
-	env[envVal.size()] = NULL;
+	close(fd);
+	// remove("./tmp.txt");
+	std::string fileContent = oss.str();
+	// std::cout << "=====================" << std::endl;
+	std::cout << "1" << std::endl;
+	size_t findCRLF = fileContent.find("\r\n\r\n");
+	size_t contentLength = fileContent.size() - (findCRLF + 4);
+	std::string contentBody = fileContent.substr(findCRLF + 4);
+	std::string startLine = "HTTP/1.1 200 OK\r\n";
+	std::string header = fileContent.substr(0, findCRLF);
+	std::cout << "2" << std::endl;
+	_ret = "";
+	_ret += startLine;
+	_ret += header;
+	_ret += "\r\n";
+	_ret += "Content-Length: " + std::to_string(contentLength);
+	_ret += "\r\n\r\n";
+	_ret += contentBody;
+	std::cout << "3" << std::endl;
+	// make response
+	// header
+	// status check
+	// content-type
 
-	int fd[2];
-    pipe(fd);
-	int originfd[2];
-	originfd[1] = dup(1);
-	originfd[0] = dup(0);
-    // int tmp_fd;
-    pid_t pid = fork();
-    if (pid == 0)
-    {
-        close(fd[1]);
-        dup2(fd[0], 0);
-        close(fd[0]);
-        int file_fd = open("./tmp.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-        dup2(file_fd, 1);
-        close(file_fd);
-		std::cout << location.getCGIPath().c_str() << std::endl;
-		execve(location.getCGIPath().c_str(), NULL, env);
-    }
-    else
-    {
-		if (request.getMethod() == "GET")
-			write(fd[1], request.getQueryString().c_str(), request.getQueryString().size());
-		if (request.getMethod() == "POST")
-			write(fd[1], request.getBody().c_str(), request.getBody().size());
-		// if (request.getMethod() == "GET")
-        // 	write(fd[1], request.getQueryString().c_str(), request.getQueryString().size());
-		// if (request.getMethod() == "POST")
-        // 	write(fd[1], request.getBody().c_str(), request.getBody().size());
-        close(fd[1]);
-        close(fd[0]);
-        waitpid(-1, NULL, 0);
-    }
-	dup2(originfd[1], 1);
-	dup2(originfd[0], 0);
+	// body
+	
 }

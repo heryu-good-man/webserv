@@ -10,7 +10,7 @@
 class Request
 {
 public:
-	Request(std::string);
+	Request(const std::string&);
 	void parseRequest(void);
 	void parseStartLine(void);
 	void parseHeader(void);

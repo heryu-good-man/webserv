@@ -46,7 +46,7 @@ int		Socket::getSocketFd() const
 	return _socketFd;
 }
 
-std::string	Socket::getBuffer() const
+const std::string&	Socket::getBuffer() const
 {
 	return _buffer;
 }

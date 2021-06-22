@@ -1,6 +1,7 @@
 #ifndef SOCKET_HPP
 # define SOCKET_HPP
 
+#include <sstream>
 #include <string>
 
 class Socket
@@ -22,7 +23,7 @@ public:
 
 	// ***** GETTOR ******
 	int			getSocketFd() const;
-	std::string	getBuffer() const;
+	const std::string&	getBuffer() const;
 	bool		getReadChecker() const;
 	int			getBodyLen() const;
 	int			getStartIndex() const

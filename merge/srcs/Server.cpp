@@ -333,7 +333,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 	int		pos;
 	
 	if ((n = read(iter->getSocketFd(), buff, sizeof(buff))) != 0)
-	{
+	{std::cout << "read" << std::endl;
 		try
 		{
 			if (n == -1)
@@ -370,8 +370,8 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 {
 	std::cout << "write!!\n";
 
-	std::cout << "============================BUFFER=============================\n";
-	std::cout << iter->getBuffer();
+	// std::cout << "============================BUFFER=============================\n";
+	// std::cout << iter->getBuffer();
 	Request request(iter->getBuffer());
 	if (iter->getBuffer().empty())
 		return 0;
@@ -379,9 +379,9 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet,
 	request.parseRequest();
 	Response tmp;
 	tmp.response(*this, request);
-	std::cout << "============================RESPONSE BUFFER=============================\n";
-	std::cout << tmp.getResponse() << std::endl;
-	std::cout << "========================================================\n";
+	// std::cout << "============================RESPONSE BUFFER=============================\n";
+	// std::cout << tmp.getResponse() << std::endl;
+	// std::cout << "========================================================\n";
 	if (write(iter->getSocketFd(), tmp.getResponse().c_str(), tmp.getResponse().size()) == -1)
 		return _socketDisconnect(iter, readSet, writeSet);
 	// char buf[] = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\nContent-Length: 100\r\nDate: Sun, 13 Jun 2021\r\n\r\nHello World AAA!!!\r\n";
