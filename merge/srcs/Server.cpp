@@ -320,7 +320,6 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter, size_t pos)
 		throw 405;
 }
 
-
 int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet)
 {
 	char	buff[MAXBUFF];
