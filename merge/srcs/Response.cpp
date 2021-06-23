@@ -72,7 +72,7 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 {
 	if (request.getBody().size() > location.getClientBodySize())
 	{
-		std::cout << "body size: " << request.getBody().size() << std::endl;
+		// std::cout << "body size: " << request.getBody().size() << std::endl;
 		throw 413;
 	}
 	if (location.getUploadEnable() == false)
@@ -166,7 +166,7 @@ void    Response::response(const Server& server, const Request& request)
 	}
 	catch(std::exception& e)
 	{
-		std::cout << "error in Response" << std::endl;
+		// std::cout << "error in Response" << std::endl;
 	}
 }
 
@@ -516,13 +516,13 @@ void		Response::_responseWithCGI(const Location& location, const std::string& pa
 {
 	// if (_getType(path) != TYPE_FILE)
 	// 	throw 404;
-	std::cout << "..cgi..." << std::endl;
+	// std::cout << "..cgi..." << std::endl;
 	CGI	cgi;
-	std::cout << "before cgi" << std::endl;
+	// std::cout << "before cgi" << std::endl;
 	cgi.setEnv(request, path);
-	std::cout << "zzzz" << std::endl;
+	// std::cout << "zzzz" << std::endl;
 	cgi.execCGI(request, location);
-	std::cout << "before open" << std::endl;
+	// std::cout << "before open" << std::endl;
 	int fd = open("./tmp.txt", O_RDONLY);
 	std::ostringstream oss;
 	char buf[30001];
@@ -536,29 +536,29 @@ void		Response::_responseWithCGI(const Location& location, const std::string& pa
 	// remove("./tmp.txt");
 	std::string fileContent = oss.str();
 	// std::cout << "=====================" << std::endl;
-	std::cout << "111" << std::endl;
+	// std::cout << "111" << std::endl;
 	size_t findCRLF = fileContent.find("\r\n\r\n");
-	std::cout << "222" << std::endl;
-	std::string contentBody = fileContent.substr(findCRLF + 4);
-	std::cout << "333" << std::endl;
+	// std::cout << "222" << std::endl;
+	// std::string contentBody = fileContent.substr(findCRLF + 4);
+	// std::cout << "333" << std::endl;
 	size_t contentLength = fileContent.size() - (findCRLF + 4);
-	std::cout << "444" << std::endl;
+	// std::cout << "444" << std::endl;
 
-	std::cout << "findCRLF: " << findCRLF << std::endl;
-	std::cout << "1. " << fileContent.size() - (findCRLF + 4) << std::endl;
-	std::cout << "2. " << contentBody.size() << std::endl;
+	// std::cout << "findCRLF: " << findCRLF << std::endl;
+	// std::cout << "1. " << fileContent.size() - (findCRLF + 4) << std::endl;
+	// std::cout << "2. " << contentBody.size() << std::endl;
 
 	std::string startLine = "HTTP/1.1 200 OK\r\n";
 	std::string header = fileContent.substr(0, findCRLF);
-	std::cout << "2" << std::endl;
+	// std::cout << "2" << std::endl;
 	_ret = "";
 	_ret += startLine;
 	_ret += header;
 	_ret += "\r\n";
 	_ret += "Content-Length: " + std::to_string(contentLength);
 	_ret += "\r\n\r\n";
-	_ret += contentBody;
-	std::cout << "end withCGI" << std::endl;
+	_ret += fileContent.substr(findCRLF + 4);
+	// std::cout << "end withCGI" << std::endl;
 	// make response
 	// header
 	// status check

@@ -79,11 +79,11 @@ private:
 
 
 	// cluster socket이 닫히면 return 1
-	int		_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet);
-	int		_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet);
-	int		_socketDisconnect(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet);
+	int		_checkReadSetAndExit(std::vector<Socket>::iterator& iter, fd_set *readSet, fd_set *writeSet);
+	int		_checkWriteSet(std::vector<Socket>::iterator& iter, fd_set *readSet, fd_set *writeSet);
+	int		_socketDisconnect(std::vector<Socket>::iterator& iter, fd_set *readSet, fd_set *writeSet);
 	size_t	_checkRN(std::string buff);
-	void	_setReadEnd(std::vector<Socket>::iterator iter);
+	void	_setReadEnd(std::vector<Socket>::iterator& iter);
 };
 
 #endif

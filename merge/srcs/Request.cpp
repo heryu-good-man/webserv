@@ -10,8 +10,8 @@ Request::Request(const std::string& message): _message(message),  _queryString("
 	size_t CRLF = _message.find("\r\n\r\n");
 	_body = _message.substr(CRLF + 4);
 	_message = _message.substr(0, CRLF + 4);
-	if (_message.substr(0, 3) != "GET")
-		std::cout << "_message:\n" << _message.substr(0, 20) << std::endl;
+	// if (_message.substr(0, 3) != "GET")
+		// std::cout << "_message:\n" << _message.substr(0, 20) << std::endl;
 }
 
 void Request::parseRequest()
@@ -28,7 +28,7 @@ void Request::parseRequest()
 	}
 	catch(std::exception &e)
 	{
-		std::cout << "error in parse Request" << std::endl;
+		// std::cout << "error in parse Request" << std::endl;
 	}
 
 	// // 출력해보기

@@ -216,7 +216,7 @@ void	Server::checkSet(fd_set *readSet, fd_set *writeSet, fd_set *copyr, fd_set *
 }
 
 // priavate
-int	Server::_socketDisconnect(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet)
+int	Server::_socketDisconnect(std::vector<Socket>::iterator& iter, fd_set *readSet, fd_set *writeSet)
 {
 	// 소켓연결해제
 	FD_CLR(iter->getSocketFd(), readSet);
@@ -225,7 +225,7 @@ int	Server::_socketDisconnect(std::vector<Socket>::iterator iter, fd_set *readSe
 	return 1;
 }
 
-void	Server::_setReadEnd(std::vector<Socket>::iterator iter)
+void	Server::_setReadEnd(std::vector<Socket>::iterator& iter)
 {
 	std::string method = iter->getRequest().getStartLine()[0];
 	if (method == "POST" || method == "PUT")
@@ -233,20 +233,20 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter)
 		std::map<std::string, std::string>::const_iterator reqEnd = iter->getRequest().getHeaders().end();
 		std::map<std::string, std::string>::const_iterator lenIter = iter->getRequest().getHeaders().find("Content-Length");
 		std::map<std::string, std::string>::const_iterator encodingIter = iter->getRequest().getHeaders().find("Transfer-Encoding");
-		char buff[MAXBUFF];
-		std::stringstream ss(lenIter->second);
-		int n;
+		int n = 0;
 		if (lenIter != reqEnd && encodingIter != reqEnd)
 			throw 400;
 		// content-length 확인
 		else if (lenIter != reqEnd)
 		{
-			ss >> n;
-			if (ss.fail())
+			char buff[MAXBUFF + 1];
+			std::stringstream contentSize(lenIter->second);
+			contentSize >> n;
+			if (contentSize.fail())
 				throw 400;
 			iter->setBodyLen(n);
 			// 여기 없애야 할거 같은데 나중에 생각하자
-			if ((n = read(iter->getSocketFd(), buff, sizeof(buff))) != 0)
+			if ((n = read(iter->getSocketFd(), buff, MAXBUFF)) != 0)
 			{
 				buff[n] = '\0';
 				iter->addStringToBuff(buff);
@@ -293,7 +293,7 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter)
 		throw 405;
 }
 
-int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet)
+int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator& iter, fd_set *readSet, fd_set *writeSet)
 {
 	// char	*buff = new char[MAXBUFF + 1];
 	char	buff[MAXBUFF + 1];
@@ -301,7 +301,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 	int		pos = 0;
 
 	// if ((n = read(iter->getSocketFd(), buff, MAXBUFF)) != 0)
-	if ((n = read(iter->getSocketFd(), buff, sizeof(buff))) != 0)
+	if ((n = read(iter->getSocketFd(), buff, MAXBUFF)) != 0)
 	{
 		try
 		{
@@ -352,7 +352,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 }
 
 
-int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet)
+int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter, fd_set *readSet, fd_set *writeSet)
 {
 	// std::cout << "after read\n";
 	iter->setRequestChecker(false);
