@@ -80,7 +80,7 @@ private:
 	std::string	_readFile(const std::string& fileName);
 	void		_isValidHTTPVersion(const std::string& httpVersion) const;
 	std::string	_isAllowedMethod(const Location& location, const std::string& method) const;
-	bool		_isCGI(const Location& location, const std::string& CGIExtention);
+	bool		_isCGI(const Location& location, const std::string& CGIExtension, std::string& path);
 
 	Location	_getMatchingLocation(const Server& server, const std::string& uri) const;
 	std::string	_getRealPath(const Location& location, const std::string& uri) const;

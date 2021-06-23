@@ -38,7 +38,7 @@ std::string	Response::makeErrorResponse(const Server& server, const std::string&
 	std::string status = std::to_string(_statusCode) + " " + statusText;
 	std::string body;
 	const std::string errorPagePath = server.getErrorPage(_statusCode);
-	if (errorPagePath != "" && _getType(errorPagePath) == TYPE_FILE)
+	if (!errorPagePath.empty() && _getType(errorPagePath) == TYPE_FILE)
 		body = _readFile(errorPagePath);
 	else
 		body = status;
@@ -120,14 +120,25 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 	_writeBody();
 }
 
-bool	Response::_isCGI(const Location& location, const std::string& CGIExtention)
+bool	Response::_isCGI(const Location& location, const std::string& CGIExtension, std::string& path)
 {
-	if (CGIExtention.empty())
-		return false;
-	else if (location.getCGI() == CGIExtention)
+	if (_getType(path) == TYPE_DIR)
+	{
+		std::string indexPage = _getIndexPage(path, location);
+		if (!indexPage.empty())
+		{
+			std::string extension = indexPage.substr(indexPage.rfind("."));
+			if (extension == location.getCGI())
+			{
+				path = indexPage;
+				return (true);
+			}
+		}
+	}
+	if (!CGIExtension.empty() && location.getCGI() == CGIExtension)
 		return true;
-	else
-		return false;
+		
+	return false;
 }
 
 void    Response::response(const Server& server, const Request& request)
@@ -141,7 +152,7 @@ void    Response::response(const Server& server, const Request& request)
 		Location location = _getMatchingLocation(server, URI);
 		std::string requestMethod = _isAllowedMethod(location, request.getMethod());
 		std::string realPath = _getRealPath(location, URI);
-		bool isCGI = _isCGI(location, request.getCGIextension());
+		bool isCGI = _isCGI(location, request.getCGIextension(), realPath);
 		// request안에 있는 _cgi_extension을 location 블락 안에 있는 CGI랑 비교하는 게 필요할듯
 		if (location.getReturn() != "")
 			_responseRedirect(location);
@@ -360,7 +371,7 @@ std::string		Response::_readFile(const std::string& fileName)
 		oss << buf;
 	}
 	close(fd);
-	_body = oss.str();
+	return (oss.str());
 }
 
 void    Response::_setBodyFromFile(const std::string& fileName)
@@ -379,38 +390,15 @@ void	Response::_setBodyFromDir(const std::string& path, const Location& location
 		dirPath += "/";
 
 	// search indexpages
-	const std::vector<std::string> indexPages = location.getIndexPages();
-
-	std::vector<std::string>::const_iterator it = indexPages.begin();
-	std::vector<std::string>::const_iterator endIter = indexPages.end();
-	while (it != endIter)
-	{
-		DIR *pDir = opendir(dirPath.c_str());
-		if (pDir == NULL)
-			throw 500;
-		struct dirent *dirEnt;
-		bool found = false;
-		while ((dirEnt = readdir(pDir)) != NULL)
-		{
-			if (dirEnt->d_name == *it)
-			{
-				found = true;
-				break ;
-			}
-		}
-		closedir(pDir);
-		if (found)
-			break ;
-		++it;
-	}
-	if (it != endIter)
-		return (_setBodyFromFile(dirPath + (*it)));
+	std::string indexPage = _getIndexPage(dirPath, location);
+	if (!indexPage.empty())
+		return (_setBodyFromFile(indexPage));
 
 	// autoindex
 	if (location.getAutoIndex() == true)
 		return (_setBodyFromAutoIndex(request, dirPath));
 
-	// else 403 status
+	// else 404 status
 	throw 404;
 }
 
@@ -457,7 +445,7 @@ void Response::_responseDELETE(const Location& location, const std::string& path
 	{
 		// search index -> 없으면 404 error
 		std::string indexPage = _getIndexPage(path, location);
-		if (indexPage == "")
+		if (indexPage.empty())
 			throw 404;
 		// 있으면 삭제
 		remove(indexPage.c_str());
@@ -512,8 +500,6 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 
 void		Response::_responseWithCGI(const Location& location, const std::string& path, const Request& request)
 {
-	// if (_getType(path) != TYPE_FILE)
-	// 	throw 404;
 	std::cout << "..cgi..." << std::endl;
 	CGI	cgi;
 	std::cout << "before cgi" << std::endl;
@@ -531,7 +517,7 @@ void		Response::_responseWithCGI(const Location& location, const std::string& pa
 		oss << buf;
 	}
 	close(fd);
-	// remove("./tmp.txt");
+	remove("./tmp.txt");
 	std::string fileContent = oss.str();
 	// std::cout << "=====================" << std::endl;
 	std::cout << "111" << std::endl;
