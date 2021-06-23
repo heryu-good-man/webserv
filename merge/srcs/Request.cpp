@@ -1,7 +1,15 @@
 #include "Request.hpp"
 
-Request::Request(std::string message): _message(message), _badRequset(false)
+Request::Request()
 {
+
+}
+
+// 재할당 수정@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Request::Request(const std::string& message): _message(message),  _queryString(""), _cgi_extension(""), _badRequset(false)
+{
+	_body = _message.substr(_message.find("\r\n\r\n") + 4);
+	_message = _message.substr(0, _message.find("\r\n\r\n"));
 }
 
 void Request::parseRequest()
@@ -10,7 +18,7 @@ void Request::parseRequest()
 	{
 		parseStartLine();
 		parseHeader();
-		parseBody();
+		// parseBody();
 	}
 	catch(int)
 	{
@@ -38,6 +46,7 @@ void Request::parseStartLine()
 
 	pos = _message.find("\r\n");
 	startLine = _message.substr(0, pos);
+	// 재할당 수정@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 	_message = _message.substr(pos + 2);
 	// startLine을 공백 단위로 스플릿
 	for (size_t i = 0; i < 3; i++)
@@ -53,6 +62,15 @@ void Request::parseStartLine()
 		if (_startLine[i] == "")
 			throw BADREQUEST;
 	}
+
+	size_t posCGI;
+	if ((posCGI = _startLine[1].find(".bla")) != _startLine[1].npos)
+		_cgi_extension = std::string(".bla");
+	else if ((posCGI = _startLine[1].find(".php")) != _startLine[1].npos)
+		_cgi_extension = std::string(".php");
+
+	if (_startLine[1].find("?") != _startLine[1].npos)
+		_queryString = _startLine[1].substr(_startLine[1].find("?") + 1);
 }
 
 void Request::parseHeader()
@@ -70,6 +88,7 @@ void Request::parseHeader()
 		pos = _message.find("\r\n");
 		// headerLine;
 		headerLine = _message.substr(0, pos);
+		// 재할당 수정@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 		_message = _message.substr(pos + 2);
 		// headerLine을 Key와 Value로 스플릿
 		posColon = headerLine.find(":");
@@ -119,7 +138,7 @@ void Request::parseBody()
 	// 			break ;
 	// 	}
 	// }
-	_body = _message;
+	// _body = _message;
 }
 
 const std::string* Request::getStartLine(void) const
@@ -127,12 +146,12 @@ const std::string* Request::getStartLine(void) const
 	return _startLine;
 }
 
-const std::map<std::string, std::string> Request::getHeaders(void) const
+const std::map<std::string, std::string>& Request::getHeaders(void) const
 {
 	return _headers;
 }
 
-const std::string Request::getBody(void) const
+const std::string& Request::getBody(void) const
 {
 	return _body;
 }

@@ -11,11 +11,13 @@ SRCS = Frame.cpp	\
 	Request.cpp		\
 	Response.cpp	\
 	Utils.cpp		\
+	CGI.cpp 		\
 
 
 OBJS = $(addprefix ./srcs/, $(SRCS:.cpp=.o))
 
 all : $(NAME)
+	sed "s~PWD~${PWD}~g" ./config/template.conf > ./config/tester2.conf
 
 %.o : %.cpp
 	$(CLANG) $(FLAG) $(SANITIZE) $(INCLUDE) -c $^ -o $@

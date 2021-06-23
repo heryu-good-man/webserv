@@ -11,6 +11,7 @@
 # include <map>
 # include "Request.hpp"
 # include "Location.hpp"
+# include "CGI.hpp"
 
 # define TYPE_FILE	1
 # define TYPE_DIR	2
@@ -72,11 +73,14 @@ private:
 	void		_responseGET(const Location&, const std::string&, const Request&, bool);
 	void 		_responseDELETE(const Location& location, const std::string& path);
 	void		_responsePUTorPOST(const Location& location, const std::string& path, const Request& request);
+	void		_responseWithCGI(const Location& location, const std::string& path, const Request& request);
+	// void		_responsePOSTwithCGI(const Location& location, const std::string& path, const Request& request);
 
 	void		_makeFile(const std::string& path, const Request& req);
 	std::string	_readFile(const std::string& fileName);
 	void		_isValidHTTPVersion(const std::string& httpVersion) const;
 	std::string	_isAllowedMethod(const Location& location, const std::string& method) const;
+	bool		_isCGI(const Location& location, const std::string& CGIExtention);
 
 	Location	_getMatchingLocation(const Server& server, const std::string& uri) const;
 	std::string	_getRealPath(const Location& location, const std::string& uri) const;

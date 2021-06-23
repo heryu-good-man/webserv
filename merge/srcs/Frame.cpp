@@ -45,7 +45,7 @@ int main(int argc, char** argv, char** envp)
 			std::cout << "bind 실패!!\n";
 			return -1;
 		}
-		if (i->listenSelf(5) == -1)
+		if (i->listenSelf(1000) == -1)
 		{
 			std::cout << "listen 실패!!\n";
 			return -1;
@@ -61,20 +61,14 @@ int main(int argc, char** argv, char** envp)
 		copyRead = readSet;
 		copyWrite = writeSet;
 
-		// std::cout << "wait req!!\n";
 		if (select(maxFd + 1, &copyRead, &copyWrite, NULL, NULL) == -1)
 		{
 			std::cout << "select Fail!!!!\n";
 			exit (-1);
 		}
-		// std::cout << "recieve req!!\n";
 
-		// 각 server의 listenSocket확인
-		// manager에 서버를 넣어줌.
 		for (std::vector<Server>::iterator iter = servers.begin(); iter != servers.end(); iter++)
 		{
-			// if (FD_ISSET(iter->getListenSocket(), &readSet))
-			// 	manager._fdManager[iter->acceptSocket(&readSet, &writeSet)] = *iter;
 			if (FD_ISSET(iter->getListenSocket(), &copyRead))
 			{
 				int tmp;
@@ -84,8 +78,7 @@ int main(int argc, char** argv, char** envp)
 				if (tmp > maxFd)
 					maxFd = tmp;
 			}
-			// 입력 버퍼에 들어온게 있는지 확인해본다.
-			// && 출력할게 있는지 확인한다.
+
 			iter->checkSet(&readSet, &writeSet, &copyRead, &copyWrite);
 			usleep(10);
 		}

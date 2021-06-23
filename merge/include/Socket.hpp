@@ -1,6 +1,7 @@
 #ifndef SOCKET_HPP
 # define SOCKET_HPP
 
+#include <sstream>
 #include <string>
 
 class Socket
@@ -22,14 +23,14 @@ public:
 
 	// ***** GETTOR ******
 	int			getSocketFd() const;
-	std::string	getBuffer() const;
+	const std::string&	getBuffer() const;
 	bool		getReadChecker() const;
 	int			getBodyLen() const;
 	int			getStartIndex() const
 	{
 		return _startIndex;
 	}
-	std::string	getChunkedBuff() const
+	const std::string&	getChunkedBuff() const
 	{
 		return _chunkedBuff;
 	}
@@ -40,9 +41,9 @@ public:
 	{
 		_startIndex = num;
 	}
-	void		setChunkedBuff(const std::string& str)
+	void		addChunkedBuff(const std::string& str)
 	{
-		_chunkedBuff = str;
+		_chunkedBuff += str;
 	}
 	void		setBuff(const std::string& str)
 	{

@@ -120,6 +120,16 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 	_writeBody();
 }
 
+bool	Response::_isCGI(const Location& location, const std::string& CGIExtention)
+{
+	if (CGIExtention.empty())
+		return false;
+	else if (location.getCGI() == CGIExtention)
+		return true;
+	else
+		return false;
+}
+
 void    Response::response(const Server& server, const Request& request)
 {
 	try
@@ -127,11 +137,16 @@ void    Response::response(const Server& server, const Request& request)
 		// if (request.isBadRequest() == true)
 		//  throw 400 ; // 400 bad request
 		_isValidHTTPVersion(request.getHTTPVersion());
-		Location location = _getMatchingLocation(server, request.getURI());
+		std::string URI = request.getURI();
+		Location location = _getMatchingLocation(server, URI);
 		std::string requestMethod = _isAllowedMethod(location, request.getMethod());
-		std::string realPath = _getRealPath(location, request.getURI());
+		std::string realPath = _getRealPath(location, URI);
+		bool isCGI = _isCGI(location, request.getCGIextension());
+		// request안에 있는 _cgi_extension을 location 블락 안에 있는 CGI랑 비교하는 게 필요할듯
 		if (location.getReturn() != "")
 			_responseRedirect(location);
+		else if ((requestMethod == "GET" || requestMethod == "POST") && isCGI == true)
+			_responseWithCGI(location, realPath, request);
 		else if (requestMethod == "GET")
 			_responseGET(location, realPath, request, true);
 		else if (requestMethod == "HEAD")
@@ -335,26 +350,17 @@ int		Response::_getTypeMIME(const std::string& fileName) const
 
 std::string		Response::_readFile(const std::string& fileName)
 {
-	std::ifstream ifs;
-	ifs.open(fileName, std::ios_base::in);
-	if (!ifs.is_open())
-		throw 500;
+	int fd = open(fileName.c_str(), O_RDONLY);
 	std::ostringstream oss;
-	char buf[1024];
-	while (1)
+	char buf[1025];
+	int ret = 0;
+	while ((ret = read(fd, buf, 1024)) > 0)
 	{
-		ifs.getline(buf, 1024);
-		if (ifs.fail())
-		{
-			ifs.clear();
-			break ;
-		}
+		buf[ret] = '\0';
 		oss << buf;
-		if (!ifs.eof())
-			oss << "\r\n";
 	}
-	ifs.close();
-	return (oss.str());
+	close(fd);
+	_body = oss.str();
 }
 
 void    Response::_setBodyFromFile(const std::string& fileName)
@@ -503,3 +509,59 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 		return (std::string());
 }
 
+
+void		Response::_responseWithCGI(const Location& location, const std::string& path, const Request& request)
+{
+	// if (_getType(path) != TYPE_FILE)
+	// 	throw 404;
+	std::cout << "..cgi..." << std::endl;
+	CGI	cgi;
+	std::cout << "before cgi" << std::endl;
+	cgi.setEnv(request, path);
+	std::cout << "zzzz" << std::endl;
+	cgi.execCGI(request, location);
+	std::cout << "before open" << std::endl;
+	int fd = open("./tmp.txt", O_RDONLY);
+	std::ostringstream oss;
+	char buf[30001];
+	int ret = 0;
+	while ((ret = read(fd, buf, 30000)) > 0)
+	{
+		buf[ret] = '\0';
+		oss << buf;
+	}
+	close(fd);
+	// remove("./tmp.txt");
+	std::string fileContent = oss.str();
+	// std::cout << "=====================" << std::endl;
+	std::cout << "111" << std::endl;
+	size_t findCRLF = fileContent.find("\r\n\r\n");
+	std::cout << "222" << std::endl;
+	std::string contentBody = fileContent.substr(findCRLF + 4);
+	std::cout << "333" << std::endl;
+	size_t contentLength = fileContent.size() - (findCRLF + 4);
+	std::cout << "444" << std::endl;
+
+	std::cout << "findCRLF: " << findCRLF << std::endl;
+	std::cout << "1. " << fileContent.size() - (findCRLF + 4) << std::endl;
+	std::cout << "2. " << contentBody.size() << std::endl;
+
+	std::string startLine = "HTTP/1.1 200 OK\r\n";
+	std::string header = fileContent.substr(0, findCRLF);
+	std::cout << "2" << std::endl;
+	_ret = "";
+	_ret += startLine;
+	_ret += header;
+	_ret += "\r\n";
+	_ret += "Content-Length: " + std::to_string(contentLength);
+	_ret += "\r\n\r\n";
+	_ret += contentBody;
+	std::cout << "end withCGI" << std::endl;
+	// make response
+	// header
+	// status check
+	// content-type
+
+	// body
+	
+}
