@@ -1,24 +1,30 @@
-CC = clang++
-CFLAGS = -Wall -Wextra -Werror -std=c++98 -I./includes
-
 NAME = webserv
+CLANG = clang++
+FLAG = -Wall -Wextra -Werror
+# SANITIZE = -g3 -fsanitize=address
+INCLUDE = -I ./include
+SRCS = Frame.cpp	\
+	Server.cpp	\
+	Socket.cpp	\
+	Config.cpp	\
+	Location.cpp	\
+	Request.cpp		\
+	Response.cpp	\
+	Utils.cpp		\
+	CGI.cpp 		\
 
-SRCS =	srcs/main.cpp \
 
-
-OBJS = $(SRCS:.cpp=.o)
-
-
-
-$(NAME) : $(OBJS)
-	$(CC) $(CFLAGS) $^ -o $@
-
-%.o : %.cpp
-	$(CC) $(CFLAGS) -c $^ -o $@
-
-
+OBJS = $(addprefix ./srcs/, $(SRCS:.cpp=.o))
 
 all : $(NAME)
+	sed "s~PWD~${PWD}~g" ./config/template.conf > ./config/tester2.conf
+	sed "s~PWD~${PWD}~g" ./config/template2.conf > ./config/my.conf
+
+%.o : %.cpp
+	$(CLANG) $(FLAG) $(SANITIZE) $(INCLUDE) -c $^ -o $@
+
+$(NAME) : $(OBJS)
+	$(CLANG) $(FLAG) $(SANITIZE) $(INCLUDE) $^ -o $@
 
 clean :
 	rm -rf $(OBJS)
@@ -26,5 +32,7 @@ clean :
 fclean : clean
 	rm -rf $(NAME)
 
-re : fclean all
+run : $(NAME)
+	./$(NAME)
 
+re : fclean all
