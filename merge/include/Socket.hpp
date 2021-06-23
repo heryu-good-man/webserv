@@ -13,6 +13,7 @@ private:
 	int			_bodyLen;
 	int			_startIndex;
 	std::string	_chunkedBuff;
+	int			_endOfHeader;
 
 	Socket();
 public:
@@ -26,6 +27,7 @@ public:
 	const std::string&	getBuffer() const;
 	bool		getReadChecker() const;
 	int			getBodyLen() const;
+	int			getEndOfHeader() const;
 	int			getStartIndex() const
 	{
 		return _startIndex;
@@ -40,6 +42,10 @@ public:
 	void		setStartIndex(int num)
 	{
 		_startIndex = num;
+	}
+	void		setEndOfHeader(int num)
+	{
+		_endOfHeader = num;
 	}
 	void		addChunkedBuff(const std::string& str)
 	{

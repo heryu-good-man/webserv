@@ -86,7 +86,7 @@ private:
 	int		_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet);
 	int		_socketDisconnect(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet);
 	size_t	_checkRN(std::string buff);
-	void	_setReadEnd(std::vector<Socket>::iterator iter, size_t pos);
+	void	_setReadEnd(std::vector<Socket>::iterator iter);
 };
 
 #endif
