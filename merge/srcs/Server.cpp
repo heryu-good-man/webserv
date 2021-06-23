@@ -267,28 +267,35 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter)
 			// 여기서 바로 읽어버리자.
 			while ((n = iter->getBuffer().find("\r\n", iter->getStartIndex())) != -1)
 			{
-				std::string oneLine;
+					// std::cout << "get buffer size!!!!!!!!!!!: " << iter->getChunkedBuff().size() << std::endl;
+				std::string oneLine = "";
 				int chunkSizeStart = iter->getStartIndex();
 				oneLine = iter->getBuffer().substr(chunkSizeStart, n - chunkSizeStart);
 				std::stringstream ss;
 				ss << std::hex << oneLine;
 				int chunkSize;
 				ss >> chunkSize;
-				if (chunkSize == 0)
+				if (chunkSize != 0 && iter->getBuffer().find("\r\n", n + 2) != (size_t)-1)
 				{
-					iter->setBuff(iter->getBuffer().substr(0, iter->getEndOfHeader()) + iter->getChunkedBuff());
-					iter->setReadChecker(true);
-					std::cout << "get buffer size!!!!!!!!!!!: " << iter->getChunkedBuff().size() << std::endl;
-					iter->clearChunkBuffer();
-				}
-				else if (iter->getBuffer().find("\r\n", n + 2) != (size_t)-1)
-				{
+					// std::cout << "add!!" << std::endl;
 					iter->addChunkedBuff(iter->getBuffer().substr(n + 2, chunkSize));
 					iter->setStartIndex(n + chunkSize + 4);
+				}
+				else if (chunkSize == 0 && iter->getBuffer().find("\r\n", n + 2) != (size_t)-1)
+				{
+					// std::cout << "heryu!!\n";
+					iter->setBuff(iter->getBuffer().substr(0, iter->getEndOfHeader()) + iter->getChunkedBuff());
+					iter->setReadChecker(true);
+					iter->setStartIndex(n + 4);
+					iter->clearChunkBuffer();
+					break ;
 				}
 				else
 					break ;
 			}
+			// std::cout << "get buffer size!!!!: " << iter->getChunkedBuff().size() << std::endl;
+			// std::cout << "body end : " << iter->getBuffer()[iter->getBuffer().size() - 1] << std::endl;
+			// std::cout << "real buf size: " << iter->getBuffer().size() << std::endl;
 		}
 	}
 	// POST, PUT외에 다른 method가 들어왔을 경우...
@@ -312,7 +319,9 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 			if (n == -1)
 				return _socketDisconnect(iter, readSet, writeSet);
 			buff[n] = '\0';
+			// std::cout << "real2 buf size: " << iter->getBuffer().size() << std::endl;
 			iter->addStringToBuff(buff);
+			// std::cout << "real3 buf size: " << iter->getBuffer().size() << std::endl;
 			pos = iter->getBuffer().find("\r\n\r\n");
 			if (pos != -1 && _check == true)
 			{
