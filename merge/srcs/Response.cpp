@@ -169,6 +169,10 @@ void    Response::response(const Server& server, const Request& request)
 		std::cout << code << std::endl;
 		_ret = makeErrorResponse(request.getMethod());
 	}
+	catch(std::exception& e)
+	{
+		std::cout << "************" << e.what() << "**********" << std::endl;
+	}
 }
 
 
