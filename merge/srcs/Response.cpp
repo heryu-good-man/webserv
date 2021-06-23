@@ -133,8 +133,12 @@ void    Response::response(const Server& server, const Request& request)
 {
 	try
 	{
-		// if (request.isBadRequest() == true)
-		//  throw 400 ; // 400 bad request
+		if (request.getMethod() == "PUT"){
+			std::cout << "body : " << request.getStartLine()[0] << std::endl;
+			std::cout << "body : " << request.getStartLine()[1] << std::endl;
+			std::cout << "body : " << request.getStartLine()[2] << std::endl;
+		}
+		// httpversion err
 		_isValidHTTPVersion(request.getHTTPVersion());
 		std::string URI = request.getURI();
 		Location location = _getMatchingLocation(server, URI);
@@ -164,6 +168,10 @@ void    Response::response(const Server& server, const Request& request)
 		_statusCode = code;
 		std::cout << code << std::endl;
 		_ret = makeErrorResponse(request.getMethod());
+	}
+	catch(std::exception& e)
+	{
+		std::cout << "************" << e.what() << "**********" << std::endl;
 	}
 }
 

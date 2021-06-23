@@ -267,31 +267,32 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter)
 			// 여기서 바로 읽어버리자.
 			while ((n = iter->getBuffer().find("\r\n", iter->getStartIndex())) != -1)
 			{
-				std::string oneLine;
+				std::string oneLine = "";
 				int chunkSizeStart = iter->getStartIndex();
 				oneLine = iter->getBuffer().substr(chunkSizeStart, n - chunkSizeStart);
 				std::stringstream ss;
 				ss << std::hex << oneLine;
 				int chunkSize;
 				ss >> chunkSize;
-				if (chunkSize == 0)
-				{
-					iter->setBuff(iter->getBuffer().substr(0, iter->getEndOfHeader()) + iter->getChunkedBuff());
-					iter->setReadChecker(true);
-					std::cout << "get buffer size!!!!!!!!!!!: " << iter->getChunkedBuff().size() << std::endl;
-					iter->clearChunkBuffer();
-				}
-				else if (iter->getBuffer().find("\r\n", n + 2) != (size_t)-1)
+				if (chunkSize != 0 && iter->getBuffer().find("\r\n", n + 2) != (size_t)-1)
 				{
 					iter->addChunkedBuff(iter->getBuffer().substr(n + 2, chunkSize));
 					iter->setStartIndex(n + chunkSize + 4);
+					std::cout << "loop test\n";
+				}
+				else if (chunkSize == 0 && iter->getBuffer().find("\r\n", n + 2) != (size_t)-1)
+				{
+					iter->setBuff(iter->getBuffer().substr(0, iter->getEndOfHeader()) + iter->getChunkedBuff());
+					iter->setReadChecker(true);
+					iter->setStartIndex(n + 4);
+					iter->clearChunkBuffer();
+					break ;
 				}
 				else
 					break ;
 			}
 		}
 	}
-	// POST, PUT외에 다른 method가 들어왔을 경우...
 	else if (method == "GET" || method == "DELETE" || method == "HEAD")
 		iter->setReadChecker(true);
 	else
@@ -303,7 +304,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 	char	buff[MAXBUFF];
 	int		n;
 	int		pos = 0;
-	
+
 	if ((n = read(iter->getSocketFd(), buff, sizeof(buff))) != 0)
 	{
 		try
@@ -311,7 +312,9 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 			if (n == -1)
 				return _socketDisconnect(iter, readSet, writeSet);
 			buff[n] = '\0';
+			// std::cout << "real2 buf size: " << iter->getBuffer().size() << std::endl;
 			iter->addStringToBuff(buff);
+			// std::cout << "real3 buf size: " << iter->getBuffer().size() << std::endl;
 			pos = iter->getBuffer().find("\r\n\r\n");
 			if (pos != -1 && _check == true)
 			{
@@ -337,6 +340,11 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 			iter->clearBuffer();
 			iter->clearChunkBuffer();
 			
+			return 1;
+		}
+		catch(std::exception& e)
+		{
+			std::cout << "**************************(*&#$(*@^#$*&\n";
 			return 1;
 		}
 	}
