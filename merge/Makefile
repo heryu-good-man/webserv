@@ -18,6 +18,7 @@ OBJS = $(addprefix ./srcs/, $(SRCS:.cpp=.o))
 
 all : $(NAME)
 	sed "s~PWD~${PWD}~g" ./config/template.conf > ./config/tester2.conf
+	sed "s~PWD~${PWD}~g" ./config/template2.conf > ./config/my.conf
 
 %.o : %.cpp
 	$(CLANG) $(FLAG) $(SANITIZE) $(INCLUDE) -c $^ -o $@

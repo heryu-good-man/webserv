@@ -3,20 +3,17 @@
 const std::string		DEFAULT_HOST = "localhost";		// 변경 필요
 const size_t			DEFAULT_PORT = 8080;
 const std::string		DEFAULT_SERVER_NAME = "localhost";
-const std::string		DEFAULT_ERROR_PAGE = "";		// 변경 필요
-
 
 Server::Server()
 	: _listenSocket()
 	, _sAddr()
 	, _cAddr()
 	, _sockets()
-	, _data()
 	, _locations()
 	, _host(DEFAULT_HOST)
 	, _port(DEFAULT_PORT)
 	, _serverName(DEFAULT_SERVER_NAME)
-	, _errorPage(DEFAULT_ERROR_PAGE)
+	, _errorPages()
 {
 
 }
@@ -26,12 +23,11 @@ Server::Server(const Server& other)
 	, _sAddr(other._sAddr)
 	, _cAddr(other._cAddr)
 	, _sockets(other._sockets)
-	, _data(other._data)
 	, _locations(other._locations)
 	, _host(other._host)
 	, _port(other._port)
 	, _serverName(other._serverName)
-	, _errorPage(other._errorPage)
+	, _errorPages(other._errorPages)
 {
 
 }
@@ -49,12 +45,11 @@ Server& Server::operator=(const Server& rhs)
 		_sAddr = rhs._sAddr;
 		_cAddr = rhs._cAddr;
 		_sockets = rhs._sockets;
-		_data = rhs._data;
 		_locations = rhs._locations;
 		_host = rhs._host;
 		_port = rhs._port;
 		_serverName = rhs._serverName;
-		_errorPage = rhs._errorPage;
+		_errorPages = rhs._errorPages;
 	}
 	return (*this);
 }
@@ -72,6 +67,26 @@ const std::vector<Location>&	Server::getLocations(void) const
 	return (_locations);
 }
 
+const std::string&				Server::getErrorPage(int code) const
+{
+	static const std::string none = "";
+	std::map<std::string, std::string>::const_iterator it = _errorPages.find(std::to_string(code));
+	if (it != _errorPages.end())
+		return (it->second);
+	else
+		return (none);
+}
+
+size_t							Server::getPort(void) const
+{
+	return (_port);
+}
+
+const std::string&				Server::getHost(void) const
+{
+	return (_host);
+}
+
 Server::Key	Server::_getKeyNumber(const std::string& key) const
 {
 	if (key == "listen")
@@ -82,30 +97,6 @@ Server::Key	Server::_getKeyNumber(const std::string& key) const
 		return (ERROR_PAGE);
 	else
 		return (NONE);
-}
-
-bool	Server::setMemberData(void)
-{
-	for (std::map<std::string, std::string>::const_iterator it = _data.begin();
-		it != _data.end(); ++it)
-	{
-		Key what = _getKeyNumber(it->first);
-		switch (what)
-		{
-		case LISTEN:
-			_setListen(it->second);
-			break ;
-		case SERVER_NAME:
-			_setServerName(it->second);
-			break ;
-		case ERROR_PAGE:
-			_setErrorPage(it->second);
-			break ;
-		default:
-			return (false);
-		}
-	}
-	return (true);
 }
 
 void	Server::_setListen(const std::string& value)
@@ -130,21 +121,9 @@ void	Server::_setServerName(const std::string& value)
 
 void	Server::_setErrorPage(const std::string& value)
 {
-	_errorPage = value;
-}
+	std::pair<std::string, std::string> p = splitString(value, " ");
 
-void	Server::print(void)
-{
-	std::cout << "###################Server####################\n";
-	std::cout << "_host: " << _host << std::endl;
-	std::cout << "_port: " << _port << std::endl;
-	std::cout << "_serverName: " << _serverName << std::endl;
-	std::cout << "_errorPage: " << _errorPage << std::endl;
-	for (std::vector<Location>::iterator it = _locations.begin(); it != _locations.end(); ++it)
-	{
-		it->print();
-	}
-	std::cout << "\n#########################################\n\n";
+	_errorPages[p.first] = p.second;
 }
 
 void	Server::setAddress(void)
@@ -166,6 +145,7 @@ void	Server::setListenSocket()
 {
 	_listenSocket = socket(PF_INET, SOCK_STREAM, 0);
 }
+
 int	Server::bindSelf()
 {
 	return bind(_listenSocket, (struct sockaddr *)&_sAddr, sizeof(_sAddr));
