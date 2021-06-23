@@ -29,25 +29,29 @@ Response		&Response::operator=(const Response &ref)
 	return *this;
 }
 
-std::string	Response::makeErrorResponse(const std::string& req)
+std::string	Response::makeErrorResponse(const Server& server, const std::string& method)
 {
 	setStatusMap();
+
 	std::map<int, std::string>* StatusMap = getStatusMap();
 	std::string statusText = StatusMap->find(_statusCode)->second;
 	std::string status = std::to_string(_statusCode) + " " + statusText;
+	std::string body;
+	const std::string errorPagePath = server.getErrorPage(_statusCode);
+	if (errorPagePath != "" && _getType(errorPagePath) == TYPE_FILE)
+		body = _readFile(errorPagePath);
+	else
+		body = status;
+
 	std::string ret = "HTTP/1.1 ";
 	ret += status;
 	ret += "\r\nContent-Type: text/html";
 	ret += "\r\nContent-Length: ";
-	ret += std::to_string(status.size());
-	
-	// if (req != "HEAD")
-	// 	ret += "\r\n\r\n";
-	// else
-	// 	ret += "\r\n";
+	ret += std::to_string(body.size());
 	ret += "\r\n\r\n";
-	if (req != "HEAD")
-		ret += status;
+	if (method != "HEAD")
+		ret += body;
+
 	unsetStatusMap();
 	return (ret);
 }
@@ -74,7 +78,7 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 		throw 413;
 	if (location.getUploadEnable() == false)
 		throw 403;
-	
+
 	int type = _getType(path);
 	if (type == TYPE_DIR) // dir
 	{
@@ -151,16 +155,12 @@ void    Response::response(const Server& server, const Request& request)
 			_responseDELETE(location, realPath);
 		else if (requestMethod == "PUT" || requestMethod == "POST")
 		 	_responsePUTorPOST(location, realPath, request);
-		// else if (requestMethod == "POST")
-		//  responsePOST(server, request); // localhost/a/b/c/d
-		// else
-		//  return ; // 501 status
 	}
 	catch(int code)
 	{
 		_statusCode = code;
 		std::cout << code << std::endl;
-		_ret = makeErrorResponse(request.getMethod());
+		_ret = makeErrorResponse(server, request.getMethod());
 	}
 }
 
@@ -348,7 +348,7 @@ int		Response::_getTypeMIME(const std::string& fileName) const
 		return (TEXT);
 }
 
-void    Response::_setBodyFromFile(const std::string& fileName)
+std::string		Response::_readFile(const std::string& fileName)
 {
 	int fd = open(fileName.c_str(), O_RDONLY);
 	std::ostringstream oss;
@@ -361,7 +361,11 @@ void    Response::_setBodyFromFile(const std::string& fileName)
 	}
 	close(fd);
 	_body = oss.str();
+}
 
+void    Response::_setBodyFromFile(const std::string& fileName)
+{
+	_body = _readFile(fileName);
 	if (_getTypeMIME(fileName) == HTML)
 		_contentType = "text/html";
 	else

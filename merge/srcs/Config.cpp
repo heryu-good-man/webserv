@@ -122,13 +122,24 @@ Server	Config::_parseServer(const std::string& content)
 			std::pair<std::string, std::string> splitedLine = splitString(dataLine, " ");
 			std::string key = splitedLine.first;
 			std::string value = splitedLine.second;
-			newServer._data[key] = value;
+			Server::Key what = newServer._getKeyNumber(key);
+			switch (what)
+			{
+			case Server::LISTEN:
+				newServer._setListen(value);
+				break ;
+			case Server::SERVER_NAME:
+				newServer._setServerName(value);
+				break ;
+			case Server::ERROR_PAGE:
+				newServer._setErrorPage(value);
+				break ;
+			default:
+				throw std::runtime_error("config error: invalid Server's key");
+			}
 			curPos = closePos + 1;
 		}
 	}
-
-	if (newServer.setMemberData() == false)
-		throw std::runtime_error("config error: invalid Server's key");
 	return (newServer);
 }
 

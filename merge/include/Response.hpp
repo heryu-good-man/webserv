@@ -55,7 +55,7 @@ public:
 	{
 		return _statusMap;
 	}
-	std::string makeErrorResponse(const std::string& req);
+	std::string makeErrorResponse(const Server& server, const std::string& req);
 	const std::string& getResponse(void) const
 	{
 		return _ret;
@@ -77,6 +77,7 @@ private:
 	// void		_responsePOSTwithCGI(const Location& location, const std::string& path, const Request& request);
 
 	void		_makeFile(const std::string& path, const Request& req);
+	std::string	_readFile(const std::string& fileName);
 	void		_isValidHTTPVersion(const std::string& httpVersion) const;
 	std::string	_isAllowedMethod(const Location& location, const std::string& method) const;
 	bool		_isCGI(const Location& location, const std::string& CGIExtention);
