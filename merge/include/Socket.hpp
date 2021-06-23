@@ -3,6 +3,7 @@
 
 #include <sstream>
 #include <string>
+#include "Request.hpp"
 
 class Socket
 {
@@ -14,6 +15,8 @@ private:
 	int			_startIndex;
 	std::string	_chunkedBuff;
 	int			_endOfHeader;
+	bool		_requestChecker;
+	Request		_request;
 
 	Socket();
 public:
@@ -36,6 +39,8 @@ public:
 	{
 		return _chunkedBuff;
 	}
+	Request&	getRequest();
+	bool		getRequestChecker();
 	// ***** SETTER ******
 	void		setReadChecker(bool b);
 	void		setBodyLen(int bodyLen);
@@ -55,6 +60,10 @@ public:
 	{
 		_buffer = str;
 	}
+	void		setRequest(const std::string& buffer)
+	{
+		_request = Request(buffer);
+	}
 
 	// ***** memberFunction ******
 	void		addStringToBuff(char *addBuff);
@@ -63,6 +72,10 @@ public:
 	void		clearChunkBuffer()
 	{
 		_chunkedBuff.clear();
+	}
+	void		setRequestChecker(bool b)
+	{
+		_requestChecker = b;
 	}
 };
 

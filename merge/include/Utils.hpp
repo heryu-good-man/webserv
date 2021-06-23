@@ -5,7 +5,7 @@
 # include <cstdlib>
 
 #define MAX 512
-#define MAXBUFF 65530 
+#define MAXBUFF 3000
 
 const size_t	LOCATION_STR_LENGTH = 8;	// strlen("location")
 const size_t	SERVER_STR_LENGTH = 6;		// strlen("server")

@@ -72,9 +72,6 @@ private:
 	std::string							_serverName;
 	std::string							_errorPage;
 
-	bool	_check;
-	Request	_request;
-
 	Key		_getKeyNumber(const std::string& key) const;
 	void	_setListen(const std::string& value);
 	void	_setServerName(const std::string& value);

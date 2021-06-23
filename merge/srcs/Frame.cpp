@@ -67,30 +67,21 @@ int main(int argc, char** argv, char** envp)
 			exit (-1);
 		}
 
-		try
+		for (std::vector<Server>::iterator iter = servers.begin(); iter != servers.end(); iter++)
 		{
-			for (std::vector<Server>::iterator iter = servers.begin(); iter != servers.end(); iter++)
+			if (FD_ISSET(iter->getListenSocket(), &copyRead))
 			{
-				if (FD_ISSET(iter->getListenSocket(), &copyRead))
-				{
-					int tmp;
+				int tmp;
 
-					std::cout << "accept!!\n";
-					tmp = iter->acceptSocket(&readSet, &writeSet);
-					if (tmp > maxFd)
-						maxFd = tmp;
-				}
-
-
-				iter->checkSet(&readSet, &writeSet, &copyRead, &copyWrite);
-				usleep(10);
+				std::cout << "accept!!\n";
+				tmp = iter->acceptSocket(&readSet, &writeSet);
+				if (tmp > maxFd)
+					maxFd = tmp;
 			}
-			
+
+
+			iter->checkSet(&readSet, &writeSet, &copyRead, &copyWrite);
+			usleep(10);
 		}
-		catch(const std::exception& e)
-		{
-			std::cout << "hello!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
-		}
-		
 	}
 }

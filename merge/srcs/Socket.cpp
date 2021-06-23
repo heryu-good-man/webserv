@@ -5,9 +5,10 @@ Socket::Socket()
 	_readChecker = false;
 	_bodyLen = 0;
 	_endOfHeader = 0;
+	_requestChecker = false;
 }
 
-Socket::Socket(int fd)
+Socket::Socket(int fd): _request()
 {
 	_readChecker = false;
 	_socketFd = fd;
@@ -16,6 +17,7 @@ Socket::Socket(int fd)
 	_startIndex = 0;
 	_chunkedBuff = "";
 	_endOfHeader = 0;
+	_requestChecker = false;
 }
 
 Socket::Socket(const Socket &from)
@@ -38,6 +40,8 @@ Socket		&Socket::operator=(const Socket &rvalue)
 		_chunkedBuff = rvalue._chunkedBuff;
 		_startIndex = rvalue._startIndex;
 		_endOfHeader = rvalue._endOfHeader;
+		_requestChecker = rvalue._requestChecker;
+		_request = rvalue._request;
 	}
 	return *this;
 }
@@ -67,6 +71,16 @@ int			Socket::getBodyLen() const
 int			Socket::getEndOfHeader() const
 {
 	return _endOfHeader;
+}
+
+Request&		Socket::getRequest()
+{
+	return (_request);
+}
+
+bool		Socket::getRequestChecker()
+{
+	return (_requestChecker);
 }
 
 // ***** memberFunction ******

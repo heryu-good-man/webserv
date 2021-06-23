@@ -17,8 +17,6 @@ Server::Server()
 	, _port(DEFAULT_PORT)
 	, _serverName(DEFAULT_SERVER_NAME)
 	, _errorPage(DEFAULT_ERROR_PAGE)
-	, _check(false)
-	, _request()
 {
 
 }
@@ -34,8 +32,6 @@ Server::Server(const Server& other)
 	, _port(other._port)
 	, _serverName(other._serverName)
 	, _errorPage(other._errorPage)
-	, _check(other._check)
-	, _request(other._request)
 {
 
 }
@@ -59,8 +55,6 @@ Server& Server::operator=(const Server& rhs)
 		_port = rhs._port;
 		_serverName = rhs._serverName;
 		_errorPage = rhs._errorPage;
-		_check = rhs._check;
-		_request = rhs._request;
 	}
 	return (*this);
 }
@@ -233,12 +227,12 @@ int	Server::_socketDisconnect(std::vector<Socket>::iterator iter, fd_set *readSe
 
 void	Server::_setReadEnd(std::vector<Socket>::iterator iter)
 {
-	std::string method = _request.getStartLine()[0];
+	std::string method = iter->getRequest().getStartLine()[0];
 	if (method == "POST" || method == "PUT")
 	{
-		std::map<std::string, std::string>::const_iterator reqEnd = _request.getHeaders().end();
-		std::map<std::string, std::string>::const_iterator lenIter = _request.getHeaders().find("Content-Length");
-		std::map<std::string, std::string>::const_iterator encodingIter = _request.getHeaders().find("Transfer-Encoding");
+		std::map<std::string, std::string>::const_iterator reqEnd = iter->getRequest().getHeaders().end();
+		std::map<std::string, std::string>::const_iterator lenIter = iter->getRequest().getHeaders().find("Content-Length");
+		std::map<std::string, std::string>::const_iterator encodingIter = iter->getRequest().getHeaders().find("Transfer-Encoding");
 		char buff[MAXBUFF];
 		std::stringstream ss(lenIter->second);
 		int n;
@@ -267,25 +261,25 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter)
 			// 여기서 바로 읽어버리자.
 			while ((n = iter->getBuffer().find("\r\n", iter->getStartIndex())) != -1)
 			{
-				std::string oneLine = "";
+				std::string sizeLine = "";
 				int chunkSizeStart = iter->getStartIndex();
-				oneLine = iter->getBuffer().substr(chunkSizeStart, n - chunkSizeStart);
+				sizeLine = iter->getBuffer().substr(chunkSizeStart, n - chunkSizeStart);
 				std::stringstream ss;
-				ss << std::hex << oneLine;
+				ss << std::hex << sizeLine;
 				int chunkSize;
 				ss >> chunkSize;
-				if (chunkSize != 0 && iter->getBuffer().find("\r\n", n + 2) != (size_t)-1)
+				if (sizeLine != "0" && iter->getBuffer().find("\r\n", n + 2) != (size_t)-1)
 				{
 					iter->addChunkedBuff(iter->getBuffer().substr(n + 2, chunkSize));
 					iter->setStartIndex(n + chunkSize + 4);
-					std::cout << "loop test\n";
 				}
-				else if (chunkSize == 0 && iter->getBuffer().find("\r\n", n + 2) != (size_t)-1)
+				else if (sizeLine == "0" && iter->getBuffer().find("\r\n", n + 2) != (size_t)-1)
 				{
 					iter->setBuff(iter->getBuffer().substr(0, iter->getEndOfHeader()) + iter->getChunkedBuff());
 					iter->setReadChecker(true);
 					iter->setStartIndex(n + 4);
 					iter->clearChunkBuffer();
+					iter->setRequestChecker(false);
 					break ;
 				}
 				else
@@ -301,10 +295,12 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator iter)
 
 int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet)
 {
-	char	buff[MAXBUFF];
+	// char	*buff = new char[MAXBUFF + 1];
+	char	buff[MAXBUFF + 1];
 	int		n;
 	int		pos = 0;
 
+	// if ((n = read(iter->getSocketFd(), buff, MAXBUFF)) != 0)
 	if ((n = read(iter->getSocketFd(), buff, sizeof(buff))) != 0)
 	{
 		try
@@ -312,25 +308,28 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 			if (n == -1)
 				return _socketDisconnect(iter, readSet, writeSet);
 			buff[n] = '\0';
+			// std::cout << "2345" << std::endl;
 			// std::cout << "real2 buf size: " << iter->getBuffer().size() << std::endl;
 			iter->addStringToBuff(buff);
 			// std::cout << "real3 buf size: " << iter->getBuffer().size() << std::endl;
 			pos = iter->getBuffer().find("\r\n\r\n");
-			if (pos != -1 && _check == true)
+			if (pos != -1 && iter->getRequestChecker() == true)
 			{
-				// std::cout << "reading...\n";
+				// std::cout << "reading...\n";x
 				_setReadEnd(iter);
+				// delete[] buff;
 			}
-			else if (pos != -1 && _check == false)
+			else if (pos != -1 && iter->getRequestChecker() == false)
 			{
-				_request = Request(iter->getBuffer());
-				_request.parseRequest();
+				iter->setRequest(iter->getBuffer());
+				iter->getRequest().parseRequest();
 				// std::cout << "before read\n";
-				_check = true;
+				iter->setRequestChecker(true);
 				iter->setStartIndex(pos + 4);
 				iter->setEndOfHeader(pos + 4);
 				_setReadEnd(iter);
-				// if (_request.getMethod() == "POST" || _request.getMethod() == "PUT")
+				// delete[] buff;
+				// if (iter->getRequest().getMethod() == "POST" || iter->getRequest().getMethod() == "PUT")
 			}
 			return 0;
 		}
@@ -339,12 +338,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 			std::cout << "err code : " << code << std::endl;
 			iter->clearBuffer();
 			iter->clearChunkBuffer();
-			
-			return 1;
-		}
-		catch(std::exception& e)
-		{
-			std::cout << "**************************(*&#$(*@^#$*&\n";
+			// delete[] buff;
 			return 1;
 		}
 	}
@@ -352,6 +346,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 	{
 		std::cout << "break!!\n";
 		_socketDisconnect(iter, readSet, writeSet);
+		// delete[] buff;
 		return 1;
 	}
 }
@@ -360,39 +355,45 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator iter, fd_set *rea
 int		Server::_checkWriteSet(std::vector<Socket>::iterator iter, fd_set *readSet, fd_set *writeSet)
 {
 	// std::cout << "after read\n";
-	_check = false;
+	iter->setRequestChecker(false);
 	// std::cout << "============================BUFFER=============================\n";
-	Request request(iter->getBuffer());
-	if (iter->getBuffer().empty())
-		return 0;
-	request.parseRequest();
-	
-	Response tmp;
-	tmp.response(*this, request);
-	// std::cout << "============================RESPONSE BUFFER=============================\n";
-	// std::cout << tmp.getResponse() << std::endl;
-	// std::cout << "========================================================\n";
+	try{
+		Request request(iter->getBuffer());
+		if (iter->getBuffer().empty())
+			return 0;
+		request.parseRequest();
+		
+		Response tmp;
+		tmp.response(*this, request);
+		// std::cout << "============================RESPONSE BUFFER=============================\n";
+		// std::cout << tmp.getResponse() << std::endl;
+		// std::cout << "========================================================\n";
 
-	size_t rest = tmp.getResponse().size();
-	size_t writtenSize = 0;
-	while (rest > 0)
-	{
-		size_t writeSize = rest < 65530 ? rest : 65530;
-		int tmpSize = 0;
-		if ((tmpSize = write(iter->getSocketFd(), tmp.getResponse().c_str() + writtenSize, writeSize)) <= 0)
+		size_t rest = tmp.getResponse().size();
+		size_t writtenSize = 0;
+		while (rest > 0)
 		{
-			if (tmpSize == -1)
-				continue ;
-			std::cout << *(tmp.getResponse().c_str() + writtenSize) << std::endl;
-			std::cout << tmpSize << ":" << writeSize << std::endl;
-			std::cout << errno << std::endl;
-			std::cout << "ssibal" << std::endl;
-			// return _socketDisconnect(iter, readSet, writeSet);
-			(void)readSet;
-			(void)writeSet;
+			size_t writeSize = rest < 65530 ? rest : 65530;
+			int tmpSize = 0;
+			if ((tmpSize = write(iter->getSocketFd(), tmp.getResponse().c_str() + writtenSize, writeSize)) <= 0)
+			{
+				if (tmpSize == -1)
+					continue ;
+				// std::cout << *(tmp.getResponse().c_str() + writtenSize) << std::endl;
+				// std::cout << tmpSize << ":" << writeSize << std::endl;
+				// std::cout << errno << std::endl;
+				// std::cout << "ssibal" << std::endl;
+				// return _socketDisconnect(iter, readSet, writeSet);
+				(void)readSet;
+				(void)writeSet;
+			}
+			rest -= tmpSize;
+			writtenSize += tmpSize;
 		}
-		rest -= tmpSize;
-		writtenSize += tmpSize;
+	}
+	catch(std::exception& e)
+	{
+		std::cout << "error in checkWriteSet\n";
 	}
 
 	// if (write(iter->getSocketFd(), tmp.getResponse().c_str(), tmp.getResponse().size()) != (ssize_t)tmp.getResponse().size())

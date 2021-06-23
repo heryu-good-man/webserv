@@ -5,11 +5,13 @@ Request::Request()
 
 }
 
-// 재할당 수정@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 Request::Request(const std::string& message): _message(message),  _queryString(""), _cgi_extension(""), _badRequset(false)
 {
-	_body = _message.substr(_message.find("\r\n\r\n") + 4);
-	_message = _message.substr(0, _message.find("\r\n\r\n"));
+	size_t CRLF = _message.find("\r\n\r\n");
+	_body = _message.substr(CRLF + 4);
+	_message = _message.substr(0, CRLF + 4);
+	if (_message.substr(0, 3) != "GET")
+		std::cout << "_message:\n" << _message.substr(0, 20) << std::endl;
 }
 
 void Request::parseRequest()
@@ -23,6 +25,10 @@ void Request::parseRequest()
 	catch(int)
 	{
 		_badRequset = true;
+	}
+	catch(std::exception &e)
+	{
+		std::cout << "error in parse Request" << std::endl;
 	}
 
 	// // 출력해보기

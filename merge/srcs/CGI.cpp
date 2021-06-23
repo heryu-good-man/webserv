@@ -89,14 +89,14 @@ void    CGI::execCGI(const Request& request, const Location& location)
             size_t rest = request.getBody().size();
             size_t writtenSize = 0;
             // std::cout << "before cgi write\n";
-            std::cout << "********request : " << request.getBody().size() << std::endl;
+            // std::cout << "********request : " << request.getBody().size() << std::endl;
             while (rest != 0)
             {
                 size_t writeSize = rest < 65530 ? rest : 65530;
                 int tmpSize = 0;
                 if ((tmpSize = write(fd[1], request.getBody().c_str() + writtenSize, writeSize)) <= 0)
                 {
-                    std::cout << "ssibal cgi" << std::endl;
+                    // std::cout << "ssibal cgi" << std::endl;
                 }
                 rest -= tmpSize;
                 writtenSize += tmpSize;
