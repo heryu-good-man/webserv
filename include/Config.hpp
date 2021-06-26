@@ -3,19 +3,17 @@
 /*                                                        :::      ::::::::   */
 /*   Config.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: hyeonkim <hyeonkim@student.42.fr>          +#+  +:+       +#+        */
+/*   By: heryu <heryu@student.42seoul.kr>           +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/06/08 21:49:40 by heryu             #+#    #+#             */
-/*   Updated: 2021/06/11 13:53:01 by hyeonkim         ###   ########.fr       */
+/*   Updated: 2021/06/25 00:19:31 by heryu            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CONFIG_HPP
 # define CONFIG_HPP
 
-class Server;
-class Location;
-
+class Config;
 # include <vector>
 # include <string>
 # include <exception>
@@ -24,8 +22,8 @@ class Location;
 # include <iostream>
 # include <stack>
 # include "Utils.hpp"
-# include "Server.hpp"
 # include "Location.hpp"
+# include "Server.hpp"
 
 class Config
 {

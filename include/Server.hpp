@@ -1,6 +1,7 @@
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
+class Server;
 # include <map>
 # include <vector>
 # include <string>
@@ -12,16 +13,24 @@
 # include <netinet/in.h>
 # include <sys/socket.h>
 # include <exception>
-# include "Socket.hpp"
-# include "Utils.hpp"
-# include "Config.hpp"
 # include "Location.hpp"
+# include "Utils.hpp"
 # include "Request.hpp"
 # include "Response.hpp"
+# include "FDManager.hpp"
+# ifdef RESPONSE_COMPILE
+ class Socket;
+# else
+	# ifdef FDMANAGER_COMPILE
+ 		class Socket;
+	# else
+		# include "Socket.hpp"
+	# endif
+# endif
 
 class Server
 {
-	friend int main(int, char**, char**);
+	friend int main(int, char**);
 	friend class Config;
 public:
 	enum Key {
@@ -47,12 +56,12 @@ public:
 	// err시 -1 리턴.
 	int						bindSelf(void);
 	int						listenSelf(int backLog);
+
 	// server의 accept를 진행하는 부분이다.
-	// 새로 받은 socket을 리턴한다.
-	int						acceptSocket(fd_set *readSet, fd_set *writeSet);
+	void					acceptSocket(void);
 
 	// server의 client소켓을 확인해보자.
-	void					checkSet(fd_set *readSet, fd_set *writeSet, fd_set *copyr, fd_set *copyw);
+	void					checkSet(fd_set *copyr, fd_set *copyw);
 
 private:
 	// basicFrame
@@ -77,9 +86,9 @@ private:
 
 
 	// cluster socket이 닫히면 return 1
-	int		_checkReadSetAndExit(std::vector<Socket>::iterator& iter, fd_set *readSet, fd_set *writeSet);
-	int		_checkWriteSet(std::vector<Socket>::iterator& iter, fd_set *readSet, fd_set *writeSet);
-	int		_socketDisconnect(std::vector<Socket>::iterator& iter, fd_set *readSet, fd_set *writeSet);
+	int		_checkReadSetAndExit(std::vector<Socket>::iterator& iter);
+	int		_checkWriteSet(std::vector<Socket>::iterator& iter);
+	int		_socketDisconnect(std::vector<Socket>::iterator& iter);
 	size_t	_checkRN(std::string buff);
 	void	_setReadEnd(std::vector<Socket>::iterator& iter);
 };

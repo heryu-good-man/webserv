@@ -7,6 +7,7 @@
 
 # define BADREQUEST 400
 
+class Request;
 class Request
 {
 public:

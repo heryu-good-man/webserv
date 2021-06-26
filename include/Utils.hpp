@@ -3,6 +3,7 @@
 
 # include <string>
 # include <cstdlib>
+# include <iostream>
 
 #define MAX 512
 #define MAXBUFF 32767

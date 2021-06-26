@@ -2,20 +2,20 @@
 #include <vector>
 #include <unistd.h>
 #include <fcntl.h>
-#include "Server.hpp"
 #include "Config.hpp"
+#include "FDManager.hpp"
+#include "Server.hpp"
 
-
-int main(int argc, char** argv, char** envp)
+int main(int argc, char** argv)
 {
-	(void)envp;
-	(void)argc;
-	fd_set	readSet;
-	fd_set	writeSet;
-	FD_ZERO(&readSet);
-	FD_ZERO(&writeSet);
+	if (argc != 2)
+	{
+		std::cout << "invalid argument(Usage ./webserv [CONFIG_FILE])" << std::endl;
+		return (1);
+	}
+
 	Config conf;
-	try 
+	try
 	{
 		conf.parseConfig(argv[1]);
 	}
@@ -33,7 +33,6 @@ int main(int argc, char** argv, char** envp)
 		std::cout << "PORT : " << servers[i]._port << std::endl;
 	}
 
-	int maxFd;
 	// 각 테스트 서버 bind, listen, setListenSocket readSet에다 넣기.
 	std::vector<Server>::iterator endI = servers.end();
 	for (std::vector<Server>::iterator i = servers.begin(); i != endI; i++)
@@ -50,20 +49,20 @@ int main(int argc, char** argv, char** envp)
 			std::cout << "listen 실패!!\n";
 			return -1;
 		}
-		FD_SET(i->getListenSocket(), &readSet);
-		// manager._fdManager[i->getListenSocket()] = *i;
-		maxFd = i->getListenSocket();
+		FDManager::instance().setFD(i->getListenSocket(), true, false);
 	}
 	fd_set copyRead;
 	fd_set copyWrite;
 	while (1)
 	{
-		copyRead = readSet;
-		copyWrite = writeSet;
+		usleep(50);
+		copyRead = FDManager::instance().getReadSet();
+		copyWrite = FDManager::instance().getWriteSet();
 
-		if (select(maxFd + 1, &copyRead, &copyWrite, NULL, NULL) == -1)
+		if (select(FDManager::instance().getMaxFD() + 1, &copyRead, &copyWrite, NULL, NULL) == -1)
 		{
 			std::cout << "select Fail!!!!\n";
+			FDManager::instance().clearFD();
 			exit (-1);
 		}
 
@@ -71,17 +70,45 @@ int main(int argc, char** argv, char** envp)
 		{
 			if (FD_ISSET(iter->getListenSocket(), &copyRead))
 			{
-				int tmp;
-
 				std::cout << "accept!!\n";
-				tmp = iter->acceptSocket(&readSet, &writeSet);
-				if (tmp > maxFd)
-					maxFd = tmp;
+				iter->acceptSocket();
 			}
+			else
+				iter->checkSet(&copyRead, &copyWrite);
+			// usleep(50);
+		}
 
-
-			iter->checkSet(&readSet, &writeSet, &copyRead, &copyWrite);
-			usleep(10);
+		for (std::vector<int>::const_iterator iter = FDManager::instance().getReadFileFDs().begin();
+				iter != FDManager::instance().getReadFileFDs().end(); )
+		{
+			if (FD_ISSET(*iter, &copyRead))
+			{
+				int ret = FDManager::instance().readFile(*iter);
+				if (ret == ERROR)
+					throw std::runtime_error("FDManager::readFile error");
+				else if (ret == MORE)
+					++iter;
+				else  // success
+					;
+			}
+			else
+				++iter;
+		}
+		for (std::vector<int>::const_iterator iter = FDManager::instance().getWriteFileFDs().begin();
+				iter != FDManager::instance().getWriteFileFDs().end(); )
+		{
+			if (FD_ISSET(*iter, &copyWrite))
+			{
+				int ret = FDManager::instance().writeFile(*iter);
+				if (ret == ERROR)
+					throw std::runtime_error("FDManager::writeFile error");
+				else if (ret == MORE)
+					++iter;
+				else  // success
+					;
+			}
+			else
+				++iter;
 		}
 	}
 }

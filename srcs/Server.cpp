@@ -158,18 +158,16 @@ int	Server::listenSelf(int backLog)
 
 // server의 accept를 진행하는 부분이다.
 // 새로 받은 socket을 리턴한다.
-int	Server::acceptSocket(fd_set *readSet, fd_set *writeSet)
+void	Server::acceptSocket(void)
 {
 	int len;
 	int tmpSock = accept(_listenSocket, (struct sockaddr *) &_cAddr, (socklen_t *)&len);
-	fcntl(tmpSock, F_SETFL, O_NONBLOCK);
+	FDManager::instance().setFD(tmpSock, true, true);
 	_sockets.push_back(Socket(tmpSock));
-	FD_SET(tmpSock, readSet);
-	FD_SET(tmpSock, writeSet);
-	return tmpSock;
+	std::cout << "accept socket fd: " << tmpSock << std::endl;
 }
 
-void	Server::checkSet(fd_set *readSet, fd_set *writeSet, fd_set *copyr, fd_set *copyw)
+void	Server::checkSet(fd_set *copyr, fd_set *copyw)
 {
 	std::vector<Socket>::iterator iter = _sockets.begin();
 	// int i = 0;
@@ -178,7 +176,7 @@ void	Server::checkSet(fd_set *readSet, fd_set *writeSet, fd_set *copyr, fd_set *
 		// std::cout << i++ << "번째 소켓!!\n";
 		if (FD_ISSET(iter->getSocketFd(), copyr))
 		{
-			if (_checkReadSetAndExit(iter, readSet, writeSet))
+			if (_checkReadSetAndExit(iter))
 			{
 				_sockets.erase(iter--);
 				continue ;
@@ -186,7 +184,7 @@ void	Server::checkSet(fd_set *readSet, fd_set *writeSet, fd_set *copyr, fd_set *
 		}
 		else if (FD_ISSET(iter->getSocketFd(), copyw) && iter->getReadChecker() == true)
 		{
-			if (_checkWriteSet(iter, readSet, writeSet))
+			if (_checkWriteSet(iter))
 			{
 				_sockets.erase(iter--);
 				continue ;
@@ -196,12 +194,10 @@ void	Server::checkSet(fd_set *readSet, fd_set *writeSet, fd_set *copyr, fd_set *
 }
 
 // priavate
-int	Server::_socketDisconnect(std::vector<Socket>::iterator& iter, fd_set *readSet, fd_set *writeSet)
+int	Server::_socketDisconnect(std::vector<Socket>::iterator& iter)
 {
 	// 소켓연결해제
-	FD_CLR(iter->getSocketFd(), readSet);
-	FD_CLR(iter->getSocketFd(), writeSet);
-	close(iter->getSocketFd());
+	FDManager::instance().unsetFD(iter->getSocketFd(), true, true);
 	return 1;
 }
 
@@ -273,7 +269,7 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator& iter)
 		throw 405;
 }
 
-int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator& iter, fd_set *readSet, fd_set *writeSet)
+int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator& iter)
 {
 	// char	*buff = new char[MAXBUFF + 1];
 	char	buff[MAXBUFF + 1];
@@ -286,7 +282,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator& iter, fd_set *re
 		try
 		{
 			if (n == -1)
-				return _socketDisconnect(iter, readSet, writeSet);
+				return _socketDisconnect(iter);
 			buff[n] = '\0';
 			// std::cout << "2345" << std::endl;
 			// std::cout << "real2 buf size: " << iter->getBuffer().size() << std::endl;
@@ -325,68 +321,69 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator& iter, fd_set *re
 	else
 	{
 		std::cout << "break!!\n";
-		_socketDisconnect(iter, readSet, writeSet);
+		_socketDisconnect(iter);
 		// delete[] buff;
 		return 1;
 	}
 }
 
-
-int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter, fd_set *readSet, fd_set *writeSet)
+int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
 {
-	// std::cout << "after read\n";
 	iter->setRequestChecker(false);
-	// std::cout << "============================BUFFER=============================\n";
-	try{
+	int condition = iter->getResponse().getCondition();
+	if (condition == NOT_SET)
+	{
 		Request request(iter->getBuffer());
-		if (iter->getBuffer().empty())
-			return 0;
 		request.parseRequest();
-		
-		Response tmp;
-		tmp.response(*this, request);
-		// std::cout << "============================RESPONSE BUFFER=============================\n";
-		// std::cout << tmp.getResponse() << std::endl;
-		// std::cout << "========================================================\n";
 
-		size_t rest = tmp.getResponse().size();
-		size_t writtenSize = 0;
-		while (rest > 0)
+		iter->getResponse().response(*this, request);
+		if (iter->getResponse().getCondition() == NOT_SET)
 		{
-			size_t writeSize = rest < 65530 ? rest : 65530;
-			int tmpSize = 0;
-			if ((tmpSize = write(iter->getSocketFd(), tmp.getResponse().c_str() + writtenSize, writeSize)) <= 0)
-			{
-				if (tmpSize == -1)
-					continue ;
-				// std::cout << *(tmp.getResponse().c_str() + writtenSize) << std::endl;
-				// std::cout << tmpSize << ":" << writeSize << std::endl;
-				// std::cout << errno << std::endl;
-				// std::cout << "ssibal" << std::endl;
-				// return _socketDisconnect(iter, readSet, writeSet);
-				(void)readSet;
-				(void)writeSet;
-			}
-			rest -= tmpSize;
-			writtenSize += tmpSize;
+			condition = ENABLE_WRITE;
+			iter->getResponse().setCondition(ENABLE_WRITE);
 		}
 	}
-	catch(std::exception& e)
+	if (condition == SET)
 	{
-		std::cout << "error in checkWriteSet\n";
-	}
+		Request request(iter->getBuffer());
+		request.parseRequest();
 
-	// if (write(iter->getSocketFd(), tmp.getResponse().c_str(), tmp.getResponse().size()) != (ssize_t)tmp.getResponse().size())
-	// {
-	// 	std::cout << "???" << std::endl;
-	// 	return _socketDisconnect(iter, readSet, writeSet);
-	// }
-	// std::cout << "...end write1..." << std::endl;
-	// char buf[] = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\nContent-Length: 100\r\nDate: Sun, 13 Jun 2021\r\n\r\nHello World AAA!!!\r\n";
-	// write(iter->getSocketFd(), buf, strlen(buf));
-	iter->setReadChecker(false);
-	// 잠깐 추가. 나중에 소켓 초기화하는 함수를 따로 만들던가 해야지 원...
-	iter->setStartIndex(0);
-	iter->clearBuffer();
+		iter->getResponse().response(*this, request);
+
+		condition = ENABLE_WRITE;
+		iter->getResponse().setCondition(ENABLE_WRITE);
+	}
+	if (condition == ENABLE_WRITE)
+	{
+		// write
+		const std::string& message = iter->getResponse().getMessage();
+		size_t writtenSize = iter->getResponse().getWrittenSize();
+		size_t restSize = message.size() - writtenSize;
+		size_t writeSize = restSize < 65530 ? restSize : 65530;
+
+		int ret = write(iter->getSocketFd(), message.c_str() + writtenSize, writeSize);
+		// std::cout << "socket: " << iter->getSocketFd() << std::endl;
+		// std::cout << "ret: " << ret << std::endl;
+		if (ret == -1)
+		{
+			FDManager::instance().unsetFD(iter->getSocketFd(), true, true);
+			throw std::runtime_error("Response write error");
+		}
+		iter->getResponse().setWrittenSize(writtenSize + ret);
+		if (iter->getResponse().getWrittenSize() == message.size())
+		{
+			condition = END;
+			iter->getResponse().setCondition(END);
+			iter->getResponse().setWrittenSize(0);
+
+			iter->setReadChecker(false);
+			iter->setStartIndex(0);
+			iter->clearBuffer();
+		}
+	}
+	if (condition == END)
+	{
+		iter->getResponse().setCondition(NOT_SET);
+	}
 	return 0;
 }

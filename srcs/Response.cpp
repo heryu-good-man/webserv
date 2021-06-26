@@ -1,9 +1,15 @@
+#ifndef RESPONSE_COMPILE
+# define RESPONSE_COMPILE
+#endif
+
 #include "Response.hpp"
 
 Response::Response(void)
 	: _ret()
 	, _body()
 	, _statusCode(200)
+	, _condition(NOT_SET)
+	, _writtenSize(0)
 {
 
 }
@@ -16,6 +22,7 @@ Response::Response(const Response &ref)
 
 Response::~Response(void)
 {
+
 }
 
 Response		&Response::operator=(const Response &ref)
@@ -25,8 +32,43 @@ Response		&Response::operator=(const Response &ref)
 		_ret = ref._ret;
 		_body = ref._body;
 		_statusCode = ref._statusCode;
+		_condition = ref._condition;
+		_writtenSize = ref._writtenSize;
 	}
 	return *this;
+}
+
+void    Response::response(const Server& server, const Request& request)
+{
+	try
+	{
+		_ret = "";
+		_statusCode = 200;
+		_isValidHTTPVersion(request.getHTTPVersion());
+		_location = _getMatchingLocation(server, request.getURI());
+		_requestMethod = _isAllowedMethod(_location, request.getMethod());
+		_path = _getRealPath(_location, request.getURI());
+		_isCGI = _isCGIRequest(_location, request.getCGIextension(), _path);
+		if (_location.getReturn() != "")
+			_responseRedirect(_location);
+		else if ((_requestMethod == "GET" || _requestMethod == "POST") && _isCGI == true)
+			_responseWithCGI(_location, _path, request);
+		else if (_requestMethod == "GET")
+			_responseGET(_location, _path, request, true);
+		else if (_requestMethod == "HEAD")
+			_responseGET(_location, _path, request, false);
+		else if (_requestMethod == "DELETE")
+			_responseDELETE(_location, _path);
+		else if (_requestMethod == "PUT" || _requestMethod == "POST")
+			_responsePUTorPOST(_location, _path, request);
+	}
+	catch(int code)
+	{
+		_statusCode = code;
+		std::cout << code << std::endl;
+		_ret = makeErrorResponse(server, request.getMethod());
+	}
+	// std::cout << _statusCode << std::endl;
 }
 
 std::string	Response::makeErrorResponse(const Server& server, const std::string& method)
@@ -56,29 +98,43 @@ std::string	Response::makeErrorResponse(const Server& server, const std::string&
 	return (ret);
 }
 
-void	Response::_makeFile(const std::string& path, const Request& req)
+std::string		Response::_readFile(const std::string& fileName)
 {
-	std::fstream file;
+	if (_condition == NOT_SET)
+	{
+		_fd = open(fileName.c_str(), O_RDONLY);
+		if (_fd == -1)
+			std::cout << "open error" << std::endl;
+		FDManager::instance().addReadFileFD(_fd, this); // reading
+	}
+	else if (_condition == SET)
+	{
+		return (FDManager::instance().getResult(_fd));
+	}
+	return (std::string(""));
+}
 
-	std::string method = req.getMethod();
-	if (method == "PUT")
-		file.open(path, std::ios_base::out | std::ios_base::trunc);
-	else if (method == "POST")
-		file.open(path, std::ios_base::out | std::ios_base::app);
-	if (!file.is_open())
-		throw 500;
-	// std::cout << "!!!!!!!!!!!!!!!!!!!!!!1" << req.getBody() << std::endl;
-	file << req.getBody();
-	file.close();
+void	Response::_writeFile(const std::string& fileName, const Request& req)
+{
+	if (_condition == NOT_SET)
+	{
+		const std::string& method = req.getMethod();
+		if (method == "PUT")
+			_fd = open(fileName.c_str(), O_WRONLY | O_TRUNC, 0666);
+		else if (method == "POST")
+			_fd = open(fileName.c_str(), O_WRONLY | O_APPEND, 0666);
+		FDManager::instance().addWriteFileFD(_fd, req.getBody(), this); // writing
+	}
+	else if (_condition == SET)
+	{
+		;
+	}
 }
 
 void	Response::_responsePUTorPOST(const Location& location, const std::string& path, const Request& request)
 {
 	if (request.getBody().size() > location.getClientBodySize())
-	{
-		// std::cout << "body size: " << request.getBody().size() << std::endl;
 		throw 413;
-	}
 	if (location.getUploadEnable() == false)
 		throw 403;
 
@@ -95,11 +151,11 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 				tmpPath += "/";
 			if (_getType(tmpPath + indexPages[0]) == TYPE_NONE) // if there is no file, make new file
 				_statusCode = 201;
-			_makeFile(tmpPath + indexPages[0], request);
+			_writeFile(tmpPath + indexPages[0], request);
 		}
 	}
 	else if (type == TYPE_FILE)
-		_makeFile(path, request);
+		_writeFile(path, request);
 	else
 	{
 		if (path.back() == '/')
@@ -108,7 +164,7 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 		if (_getType(previousPath) == TYPE_DIR)  // if there is directory, make new file
 		{
 			_statusCode = 201;
-			_makeFile(path, request);
+			_writeFile(path, request);
 		}
 		else
 			throw 404;
@@ -123,7 +179,7 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 	_writeBody();
 }
 
-bool	Response::_isCGI(const Location& location, const std::string& CGIExtension, std::string& path)
+bool	Response::_isCGIRequest(const Location& location, const std::string& CGIExtension, std::string& path)
 {
 	if (_getType(path) == TYPE_DIR)
 	{
@@ -140,47 +196,9 @@ bool	Response::_isCGI(const Location& location, const std::string& CGIExtension,
 	}
 	if (!CGIExtension.empty() && location.getCGI() == CGIExtension)
 		return true;
-		
+
 	return false;
 }
-
-void    Response::response(const Server& server, const Request& request)
-{
-	try
-	{
-		// httpversion err
-		_isValidHTTPVersion(request.getHTTPVersion());
-		std::string URI = request.getURI();
-		Location location = _getMatchingLocation(server, URI);
-		std::string requestMethod = _isAllowedMethod(location, request.getMethod());
-		std::string realPath = _getRealPath(location, URI);
-		bool isCGI = _isCGI(location, request.getCGIextension(), realPath);
-		// request안에 있는 _cgi_extension을 location 블락 안에 있는 CGI랑 비교하는 게 필요할듯
-		if (location.getReturn() != "")
-			_responseRedirect(location);
-		else if ((requestMethod == "GET" || requestMethod == "POST") && isCGI == true)
-			_responseWithCGI(location, realPath, request);
-		else if (requestMethod == "GET")
-			_responseGET(location, realPath, request, true);
-		else if (requestMethod == "HEAD")
-			_responseGET(location, realPath, request, false);
-		else if (requestMethod == "DELETE")
-			_responseDELETE(location, realPath);
-		else if (requestMethod == "PUT" || requestMethod == "POST")
-		 	_responsePUTorPOST(location, realPath, request);
-	}
-	catch(int code)
-	{
-		_statusCode = code;
-		std::cout << code << std::endl;
-		_ret = makeErrorResponse(server, request.getMethod());
-	}
-	catch(std::exception& e)
-	{
-		// std::cout << "error in Response" << std::endl;
-	}
-}
-
 
 void	Response::_writeStartLine(void)
 {
@@ -235,10 +253,10 @@ void	Response::_responseRedirect(const Location& location)
 
 void	Response::_responseGET(const Location& location, const std::string& realPath, const Request& request, bool isGET)
 {
-	int type = _getType(realPath);
-	if (type == TYPE_FILE)
+	_type = _getType(realPath);
+	if (_type == TYPE_FILE)
 		_setBodyFromFile(realPath);
-	else if (type == TYPE_DIR)
+	else if (_type == TYPE_DIR)
 		_setBodyFromDir(realPath, location, request);
 	else	// not found
 		throw 404;
@@ -365,28 +383,14 @@ int		Response::_getTypeMIME(const std::string& fileName) const
 		return (TEXT);
 }
 
-std::string		Response::_readFile(const std::string& fileName)
-{
-	int fd = open(fileName.c_str(), O_RDONLY);
-	std::ostringstream oss;
-	char buf[1025];
-	int ret = 0;
-	while ((ret = read(fd, buf, 1024)) > 0)
-	{
-		buf[ret] = '\0';
-		oss << buf;
-	}
-	close(fd);
-	return (oss.str());
-}
-
 void    Response::_setBodyFromFile(const std::string& fileName)
 {
-	_body = _readFile(fileName);
 	if (_getTypeMIME(fileName) == HTML)
 		_contentType = "text/html";
 	else
 		_contentType = "text/plain";
+
+	_body = _readFile(fileName);
 }
 
 void	Response::_setBodyFromDir(const std::string& path, const Location& location, const Request& request)
@@ -507,40 +511,30 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 void		Response::_responseWithCGI(const Location& location, const std::string& path, const Request& request)
 {
 	std::cout << "..cgi..." << std::endl;
-	CGI	cgi;
-	// std::cout << "before cgi" << std::endl;
-	cgi.setEnv(request, path);
-	// std::cout << "zzzz" << std::endl;
-	cgi.execCGI(request, location);
-	// std::cout << "before open" << std::endl;
+
+	_cgi.setEnv(request, path);
+	_cgi.execCGI(request, location); // fork -> write(QUERY) -> read
+
 	int fd = open("./tmp.txt", O_RDONLY);
-	std::ostringstream oss;
+	std::string fileContent;
 	char buf[30001];
 	int ret = 0;
 	while ((ret = read(fd, buf, 30000)) > 0)
 	{
 		buf[ret] = '\0';
-		oss << buf;
+		fileContent += buf;
 	}
 	close(fd);
 	remove("./tmp.txt");
-	std::string fileContent = oss.str();
-	// std::cout << "=====================" << std::endl;
-	// std::cout << "111" << std::endl;
-	size_t findCRLF = fileContent.find("\r\n\r\n");
-	// std::cout << "222" << std::endl;
-	// std::string contentBody = fileContent.substr(findCRLF + 4);
-	// std::cout << "333" << std::endl;
-	size_t contentLength = fileContent.size() - (findCRLF + 4);
-	// std::cout << "444" << std::endl;
 
-	// std::cout << "findCRLF: " << findCRLF << std::endl;
-	// std::cout << "1. " << fileContent.size() - (findCRLF + 4) << std::endl;
-	// std::cout << "2. " << contentBody.size() << std::endl;
+	size_t findCRLF = fileContent.find("\r\n\r\n");
+	size_t contentLength = fileContent.size() - (findCRLF + 4);
+
+	std::cout << "findCRLF: " << findCRLF << std::endl;
+	std::cout << "contentLength: " << contentLength << std::endl;
 
 	std::string startLine = "HTTP/1.1 200 OK\r\n";
 	std::string header = fileContent.substr(0, findCRLF);
-	// std::cout << "2" << std::endl;
 	_ret = "";
 	_ret += startLine;
 	_ret += header;
@@ -548,12 +542,4 @@ void		Response::_responseWithCGI(const Location& location, const std::string& pa
 	_ret += "Content-Length: " + std::to_string(contentLength);
 	_ret += "\r\n\r\n";
 	_ret += fileContent.substr(findCRLF + 4);
-	// std::cout << "end withCGI" << std::endl;
-	// make response
-	// header
-	// status check
-	// content-type
-
-	// body
-	
 }

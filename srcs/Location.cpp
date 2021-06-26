@@ -82,7 +82,7 @@ Location::Key	Location::_getKeyNumber(const std::string& key) const
 	else if (key == "index")
 		return (INDEX_PAGES);
 	else if (key == "cgi_extension")
-		return (CGI);
+		return (CGI_EXT);
 	else if (key == "cgi_path_info")
 		return (CGI_PATH);
 	else if (key == "return")
@@ -120,7 +120,7 @@ bool	Location::setMemberData(void)
 		case INDEX_PAGES:
 			_setIndexPages(it->second);
 			break ;
-		case CGI:
+		case CGI_EXT:
 			_setCGI(it->second);
 			break ;
 		case CGI_PATH:

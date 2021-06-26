@@ -1,6 +1,6 @@
 #include "Socket.hpp"
 
-Socket::Socket()
+Socket::Socket() : _request(), _response()
 {
 	_readChecker = false;
 	_bodyLen = 0;
@@ -8,7 +8,7 @@ Socket::Socket()
 	_requestChecker = false;
 }
 
-Socket::Socket(int fd): _request()
+Socket::Socket(int fd): _request(), _response()
 {
 	_readChecker = false;
 	_socketFd = fd;
@@ -42,6 +42,7 @@ Socket		&Socket::operator=(const Socket &rvalue)
 		_endOfHeader = rvalue._endOfHeader;
 		_requestChecker = rvalue._requestChecker;
 		_request = rvalue._request;
+		_response = rvalue._response;
 	}
 	return *this;
 }
@@ -76,6 +77,11 @@ int			Socket::getEndOfHeader() const
 Request&		Socket::getRequest()
 {
 	return (_request);
+}
+
+Response&		Socket::getResponse()
+{
+	return (_response);
 }
 
 bool		Socket::getRequestChecker()

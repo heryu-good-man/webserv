@@ -9,9 +9,10 @@ SRCS = Frame.cpp	\
 	Config.cpp	\
 	Location.cpp	\
 	Request.cpp		\
-	Response.cpp	\
 	Utils.cpp		\
 	CGI.cpp 		\
+	Response.cpp	\
+	FDManager.cpp \
 
 
 OBJS = $(addprefix ./srcs/, $(SRCS:.cpp=.o))

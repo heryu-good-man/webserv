@@ -1,11 +1,11 @@
 #ifndef LOCATION_HPP
 # define LOCATION_HPP
 
+class Location;
 # include <map>
 # include <string>
 # include <vector>
 # include "Utils.hpp"
-# include "Config.hpp"
 
 class Location
 {
@@ -13,7 +13,7 @@ class Location
 public:
 	enum Key {
 		PATH, METHOD, ROOT, AUTO_INDEX,
-		INDEX_PAGES ,CGI, CGI_PATH,
+		INDEX_PAGES ,CGI_EXT, CGI_PATH,
 		RETURN, UPLOAD_ENABLE, CLIENT_BODY_SIZE,
 		NONE
 	};

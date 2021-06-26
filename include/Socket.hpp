@@ -1,9 +1,12 @@
 #ifndef SOCKET_HPP
 # define SOCKET_HPP
 
+class Socket;
+
 #include <sstream>
 #include <string>
 #include "Request.hpp"
+#include "Response.hpp"
 
 class Socket
 {
@@ -17,6 +20,7 @@ private:
 	int			_endOfHeader;
 	bool		_requestChecker;
 	Request		_request;
+	Response	_response;
 
 	Socket();
 public:
@@ -40,6 +44,7 @@ public:
 		return _chunkedBuff;
 	}
 	Request&	getRequest();
+	Response&	getResponse();
 	bool		getRequestChecker();
 	// ***** SETTER ******
 	void		setReadChecker(bool b);

@@ -1,6 +1,7 @@
 #ifndef RESPONSE_HPP
 # define RESPONSE_HPP
 
+class Response;
 # include <string>
 # include <iostream>
 # include <fstream>
@@ -9,9 +10,11 @@
 # include <cstdlib>
 # include <dirent.h>
 # include <map>
-# include "Request.hpp"
 # include "Location.hpp"
+# include "FDManager.hpp"
+# include "Request.hpp"
 # include "CGI.hpp"
+# include "Server.hpp"
 
 # define TYPE_FILE	1
 # define TYPE_DIR	2
@@ -56,17 +59,42 @@ public:
 		return _statusMap;
 	}
 	std::string makeErrorResponse(const Server& server, const std::string& req);
-	const std::string& getResponse(void) const
+	const std::string& getMessage(void) const
 	{
 		return _ret;
 	}
+	int	getCondition(void) const
+	{
+		return (_condition);
+	}
+	void setCondition(int condition)
+	{
+		_condition = condition;
+	}
+	size_t getWrittenSize(void) const
+	{
+		return (_writtenSize);
+	}
+	void setWrittenSize(size_t size)
+	{
+		_writtenSize = size;
+	}
 
 private:
-	std::string		_ret;
-	std::string		_body;
-	int				_statusCode;
-	std::map<int, std::string>*_statusMap;
-	std::string		_contentType;
+	std::string					_ret;
+	std::string					_body;
+	int							_statusCode;
+	std::map<int, std::string>*	_statusMap;
+	std::string					_contentType;
+	Location					_location;
+	std::string					_requestMethod;
+	std::string					_path;
+	bool						_isCGI;
+	int							_type;
+	int							_fd;
+	CGI							_cgi;
+	int							_condition;
+	size_t						_writtenSize;
 
 
 	void		_responseRedirect(const Location& location);
@@ -76,11 +104,11 @@ private:
 	void		_responseWithCGI(const Location& location, const std::string& path, const Request& request);
 	// void		_responsePOSTwithCGI(const Location& location, const std::string& path, const Request& request);
 
-	void		_makeFile(const std::string& path, const Request& req);
+	void		_writeFile(const std::string& fileName, const Request& req);
 	std::string	_readFile(const std::string& fileName);
 	void		_isValidHTTPVersion(const std::string& httpVersion) const;
 	std::string	_isAllowedMethod(const Location& location, const std::string& method) const;
-	bool		_isCGI(const Location& location, const std::string& CGIExtension, std::string& path);
+	bool		_isCGIRequest(const Location& location, const std::string& CGIExtension, std::string& path);
 
 	Location	_getMatchingLocation(const Server& server, const std::string& uri) const;
 	std::string	_getRealPath(const Location& location, const std::string& uri) const;

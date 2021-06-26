@@ -1,6 +1,7 @@
 #ifndef CGI_HPP
 # define CGI_HPP
 
+class CGI;
 #include <vector>
 #include <string>
 #include <cstdlib>
