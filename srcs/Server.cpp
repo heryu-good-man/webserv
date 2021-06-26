@@ -329,6 +329,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator& iter)
 
 int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
 {
+	// std::cout << "fd: " << iter->getSocketFd() << ": condition: " << iter->getResponse().getCondition() << std::endl;
 	iter->setRequestChecker(false);
 	int condition = iter->getResponse().getCondition();
 	if (condition == NOT_SET)
@@ -336,12 +337,20 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
 		Request request(iter->getBuffer());
 		request.parseRequest();
 
+		iter->getResponse().setSocketNum(iter->getSocketFd());
 		iter->getResponse().response(*this, request);
 		if (iter->getResponse().getCondition() == NOT_SET)
 		{
 			condition = ENABLE_WRITE;
 			iter->getResponse().setCondition(ENABLE_WRITE);
 		}
+	}
+	if (condition == CGI_READ)
+	{
+		Request request(iter->getBuffer());
+		request.parseRequest();
+
+		iter->getResponse().response(*this, request);
 	}
 	if (condition == SET)
 	{
@@ -362,8 +371,6 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
 		size_t writeSize = restSize < 65530 ? restSize : 65530;
 
 		int ret = write(iter->getSocketFd(), message.c_str() + writtenSize, writeSize);
-		// std::cout << "socket: " << iter->getSocketFd() << std::endl;
-		// std::cout << "ret: " << ret << std::endl;
 		if (ret == -1)
 		{
 			FDManager::instance().unsetFD(iter->getSocketFd(), true, true);

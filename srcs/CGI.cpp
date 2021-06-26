@@ -1,3 +1,7 @@
+#ifndef CGI_COMPILE
+# define CGI_COMPILE
+#endif
+
 #include "CGI.hpp"
 
 CGI::CGI()
@@ -22,6 +26,8 @@ CGI&    CGI::operator=(const CGI& rhs)
 	if (this != &rhs)
 	{
 		_env = rhs._env;
+		_path = rhs._path;
+		_PID = rhs._PID;
 	}
 	return (*this);
 }
@@ -60,7 +66,7 @@ void    CGI::setEnv(const Request& request, const std::string path)
 	_env[envVal.size()] = NULL;
 }
 
-void    CGI::execCGI(const Request& request, const Location& location)
+void    CGI::execCGI(const Request& request, const Location& location, Response* response, const std::string& path)
 {
 	int fd[2];
 	pipe(fd);
@@ -75,7 +81,7 @@ void    CGI::execCGI(const Request& request, const Location& location)
 		dup2(fd[0], 0);
 		close(fd[0]);
 		// std::cout << "before open\n";
-		int file_fd = open("./tmp.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		int file_fd = open(path.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 		// std::cout << "after open\n";
 		dup2(file_fd, 1);
 		close(file_fd);
@@ -84,31 +90,34 @@ void    CGI::execCGI(const Request& request, const Location& location)
 	}
 	else
 	{
-		if (request.getMethod() == "POST")
-		{
-			size_t rest = request.getBody().size();
-			size_t writtenSize = 0;
-			while (rest != 0)
-			{
-				size_t writeSize = rest < 65530 ? rest : 65530;
-				int tmpSize = 0;
-				if ((tmpSize = write(fd[1], request.getBody().c_str() + writtenSize, writeSize)) <= 0)
-				{
-					;
-				}
-				rest -= tmpSize;
-				writtenSize += tmpSize;
-			}
-		}
-		close(fd[1]);
+		_PID = pid;
+		FDManager::instance().addWriteFileFD(fd[1], request.getBody(), response, true);
 		close(fd[0]);
-		waitpid(-1, NULL, 0);
+		dup2(originfd[1], 1);
+		dup2(originfd[0], 0);
+		close(originfd[1]);
+		close(originfd[0]);
+		_clearEnv();
 	}
-	dup2(originfd[1], 1);
-	dup2(originfd[0], 0);
-	close(originfd[1]);
-	close(originfd[0]);
-	_clearEnv();
+}
+
+void               CGI::setPath(std::string path)
+{
+	_path = path;
+}
+const std::string& CGI::getPath(void) const
+{
+	return (_path);
+}
+
+void               CGI::setPID(pid_t pid)
+{
+	_PID = pid;
+}
+
+pid_t              CGI::getPID(void) const
+{
+	return (_PID);
 }
 
 void    CGI::_clearEnv(void)

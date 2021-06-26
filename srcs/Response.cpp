@@ -10,6 +10,7 @@ Response::Response(void)
 	, _statusCode(200)
 	, _condition(NOT_SET)
 	, _writtenSize(0)
+	, _socketNum(-1)
 {
 
 }
@@ -34,6 +35,8 @@ Response		&Response::operator=(const Response &ref)
 		_statusCode = ref._statusCode;
 		_condition = ref._condition;
 		_writtenSize = ref._writtenSize;
+		_socketNum = ref._socketNum;
+		_cgi = ref._cgi;
 	}
 	return *this;
 }
@@ -105,7 +108,7 @@ std::string		Response::_readFile(const std::string& fileName)
 		_fd = open(fileName.c_str(), O_RDONLY);
 		if (_fd == -1)
 			std::cout << "open error" << std::endl;
-		FDManager::instance().addReadFileFD(_fd, this); // reading
+		FDManager::instance().addReadFileFD(_fd, this, false); // reading
 	}
 	else if (_condition == SET)
 	{
@@ -123,7 +126,7 @@ void	Response::_writeFile(const std::string& fileName, const Request& req)
 			_fd = open(fileName.c_str(), O_WRONLY | O_TRUNC, 0666);
 		else if (method == "POST")
 			_fd = open(fileName.c_str(), O_WRONLY | O_APPEND, 0666);
-		FDManager::instance().addWriteFileFD(_fd, req.getBody(), this); // writing
+		FDManager::instance().addWriteFileFD(_fd, req.getBody(), this, false); // writing
 	}
 	else if (_condition == SET)
 	{
@@ -511,35 +514,56 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 void		Response::_responseWithCGI(const Location& location, const std::string& path, const Request& request)
 {
 	std::cout << "..cgi..." << std::endl;
-
-	_cgi.setEnv(request, path);
-	_cgi.execCGI(request, location); // fork -> write(QUERY) -> read
-
-	int fd = open("./tmp.txt", O_RDONLY);
-	std::string fileContent;
-	char buf[30001];
-	int ret = 0;
-	while ((ret = read(fd, buf, 30000)) > 0)
+	if (_condition == NOT_SET)
 	{
-		buf[ret] = '\0';
-		fileContent += buf;
+		_cgi.setEnv(request, path);
+		_cgi.setPath("./tmp" + std::to_string(_socketNum));
+		_cgi.execCGI(request, location, this, _cgi.getPath()); // fork -> write(QUERY) -> read
 	}
-	close(fd);
-	remove("./tmp.txt");
+	if (_condition == CGI_READ)
+	{
+		waitpid(_cgi.getPID(), NULL, 0);
+		std::cout << "get or cgi_read" << std::endl;
+		_fd = open(_cgi.getPath().c_str(), O_RDONLY);
+		if (_fd == -1)
+		{
+			std::cout << errno << std::endl;
+			std::cout << "망가짐" << std::endl;
+		}
+		FDManager::instance().addReadFileFD(_fd, this, true);
+	}
+	if (_condition == SET)
+	{
+		remove(_cgi.getPath().c_str());
+		std::string fileContent = FDManager::instance().getResult(_fd);
+		size_t findCRLF = fileContent.find("\r\n\r\n");
+		size_t contentLength = fileContent.size() - (findCRLF + 4);
 
-	size_t findCRLF = fileContent.find("\r\n\r\n");
-	size_t contentLength = fileContent.size() - (findCRLF + 4);
+		std::cout << "findCRLF: " << findCRLF << std::endl;
+		std::cout << "contentLength: " << contentLength << std::endl;
 
-	std::cout << "findCRLF: " << findCRLF << std::endl;
-	std::cout << "contentLength: " << contentLength << std::endl;
+		std::string startLine = "HTTP/1.1 200 OK\r\n";
+		std::string header = fileContent.substr(0, findCRLF);
+		_ret = "";
+		_ret += startLine;
+		_ret += header;
+		_ret += "\r\n";
+		_ret += "Content-Length: " + std::to_string(contentLength);
+		_ret += "\r\n\r\n";
+		_ret += fileContent.substr(findCRLF + 4);
+	}
 
-	std::string startLine = "HTTP/1.1 200 OK\r\n";
-	std::string header = fileContent.substr(0, findCRLF);
-	_ret = "";
-	_ret += startLine;
-	_ret += header;
-	_ret += "\r\n";
-	_ret += "Content-Length: " + std::to_string(contentLength);
-	_ret += "\r\n\r\n";
-	_ret += fileContent.substr(findCRLF + 4);
+	// int fd = open("./tmp.txt", O_RDONLY);
+	// std::string fileContent;
+	// char buf[30001];
+	// int ret = 0;
+	// while ((ret = read(fd, buf, 30000)) > 0)
+	// {
+	// 	buf[ret] = '\0';
+	// 	fileContent += buf;
+	// }
+	// close(fd);
+	// remove("./tmp.txt");
+
+
 }

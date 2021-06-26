@@ -79,6 +79,18 @@ public:
 	{
 		_writtenSize = size;
 	}
+	int getSocketNum(void) const
+	{
+		return (_socketNum);
+	}
+	void setSocketNum(int num)
+	{
+		_socketNum = num;
+	}
+	const CGI& getCGI(void) const
+	{
+		return (_cgi);
+	}
 
 private:
 	std::string					_ret;
@@ -95,6 +107,7 @@ private:
 	CGI							_cgi;
 	int							_condition;
 	size_t						_writtenSize;
+	int							_socketNum;
 
 
 	void		_responseRedirect(const Location& location);

@@ -24,7 +24,11 @@ class Server;
 	# ifdef FDMANAGER_COMPILE
  		class Socket;
 	# else
-		# include "Socket.hpp"
+		# ifdef CGI_COMPILE
+			class Socket;
+		# else
+			# include "Socket.hpp"
+		# endif
 	# endif
 # endif
 

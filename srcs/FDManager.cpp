@@ -50,7 +50,6 @@ void	FDManager::resetMaxFD(void)
 		if (*it > _maxFD)
 			_maxFD = *it;
 	}
-	// std::cout << "maxFD : " << _maxFD << std::endl;
 }
 
 void	FDManager::addFD(int fd)
@@ -148,17 +147,21 @@ const std::vector<int>&	FDManager::getWriteFileFDs(void)
 	return (_writeFileFDs);
 }
 
-void	FDManager::addReadFileFD(int fd, Response* response)
+void	FDManager::addReadFileFD(int fd, Response* response, bool isCGI)
 {
-	_matchFDResponse[fd] =  response;
+	_isCGI[fd] = isCGI;
+
+	_matchFDResponse[fd] = response;
 	_readFileFDs.push_back(fd);
 
 	setFD(fd, true, false);
 	response->setCondition(READING);
 }
 
-void	FDManager::addWriteFileFD(int fd, const std::string& data, Response* response)
+void	FDManager::addWriteFileFD(int fd, const std::string& data, Response* response, bool isCGI)
 {
+	_isCGI[fd] = isCGI;
+
 	_matchFDResponse.insert(std::make_pair(fd, response));
 	_writeFileFDs.push_back(fd);
 	_data.insert(std::make_pair(fd, data));
@@ -182,6 +185,7 @@ int		FDManager::readFile(int fd)
 	{
 		_matchFDResponse[fd]->setCondition(SET);
 		unsetFileFD(fd, true, false);
+		_isCGI.erase(fd);
 		return (SUCCESS);
 	}
 	else				// need more
@@ -195,23 +199,27 @@ int		FDManager::readFile(int fd)
 int		FDManager::writeFile(int fd)
 {
 	size_t writtenSize = _written[fd];
-	size_t writeSize = _data[fd].size() - writtenSize;
+	size_t rest = _data[fd].size() - writtenSize;
+	size_t writeSize = rest < 65530 ? rest : 65530;
 	int ret = write(fd, _data[fd].c_str() + writtenSize, writeSize);
-
 	if (ret == -1)				// error
 	{
 		unsetFileFD(fd, false, true);
 		return (ERROR);
 	}
-	else if (static_cast<size_t>(ret) == writeSize)	// end
+	_written[fd] += ret;
+	if (_written[fd] == _data[fd].size())	// end
 	{
-		_matchFDResponse[fd]->setCondition(SET);
+		if (_isCGI[fd])
+			_matchFDResponse[fd]->setCondition(CGI_READ);
+		else
+			_matchFDResponse[fd]->setCondition(SET);
 		unsetFileFD(fd, false, true);
+		_isCGI.erase(fd);
 		return (SUCCESS);
 	}
 	else						// need more
 	{
-		_written[fd] += ret;
 		return (MORE);
 	}
 }

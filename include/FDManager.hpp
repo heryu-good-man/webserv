@@ -8,14 +8,19 @@ class FDManager;
 # include <unistd.h>
 # include <fcntl.h>
 # include <exception>
-# include "Response.hpp"
+# ifdef CGI_COMPILE
+	class Response;
+# else
+	# include "Response.hpp"
+# endif
 
 # define NOT_SET		0
 # define SET			1
 # define READING		2
 # define WRITING		3
 # define ENABLE_WRITE	4
-# define END			5
+# define CGI_READ		5
+# define END			6
 
 # define ERROR			0
 # define SUCCESS		1
@@ -42,8 +47,8 @@ public:
 	const std::vector<int>&	getReadFileFDs(void);
 	const std::vector<int>&	getWriteFileFDs(void);
 
-	void	addReadFileFD(int fd, Response* response);
-	void	addWriteFileFD(int fd, const std::string& data, Response* response);
+	void	addReadFileFD(int fd, Response* response, bool isCGI);
+	void	addWriteFileFD(int fd, const std::string& data, Response* response, bool isCGI);
 	int		readFile(int fd);
 	int		writeFile(int fd);
 	std::string	getResult(int fd);
@@ -65,6 +70,7 @@ private:
 	std::map<int, size_t>				_written;
 	std::map<int, std::string>			_data;
 
+	std::map<int, bool>					_isCGI;
 
 	FDManager();
 	FDManager(const FDManager& other);

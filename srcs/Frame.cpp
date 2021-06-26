@@ -69,10 +69,7 @@ int main(int argc, char** argv)
 		for (std::vector<Server>::iterator iter = servers.begin(); iter != servers.end(); iter++)
 		{
 			if (FD_ISSET(iter->getListenSocket(), &copyRead))
-			{
-				std::cout << "accept!!\n";
 				iter->acceptSocket();
-			}
 			else
 				iter->checkSet(&copyRead, &copyWrite);
 			// usleep(50);
