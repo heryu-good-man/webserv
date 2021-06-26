@@ -329,7 +329,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator& iter)
 
 int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
 {
-	// std::cout << "fd: " << iter->getSocketFd() << ": condition: " << iter->getResponse().getCondition() << std::endl;
+	std::cout << "fd: " << iter->getSocketFd() << ": condition: " << iter->getResponse().getCondition() << std::endl;
 	iter->setRequestChecker(false);
 	int condition = iter->getResponse().getCondition();
 	if (condition == NOT_SET)

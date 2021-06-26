@@ -33,10 +33,19 @@ Response		&Response::operator=(const Response &ref)
 		_ret = ref._ret;
 		_body = ref._body;
 		_statusCode = ref._statusCode;
+		_statusMap = ref._statusMap;
+		_contentType = ref._contentType;
+		_location = ref._location;
+		_requestMethod = ref._requestMethod;
+		_path = ref._path;
+		_isCGI = ref._isCGI;
+		_type = ref._type;
+		_fd = ref._fd;
+		_cgi = ref._cgi;
 		_condition = ref._condition;
 		_writtenSize = ref._writtenSize;
 		_socketNum = ref._socketNum;
-		_cgi = ref._cgi;
+
 	}
 	return *this;
 }
@@ -107,7 +116,9 @@ std::string		Response::_readFile(const std::string& fileName)
 	{
 		_fd = open(fileName.c_str(), O_RDONLY);
 		if (_fd == -1)
-			std::cout << "open error" << std::endl;
+		{
+			throw std::runtime_error("Response: read open error");
+		}
 		FDManager::instance().addReadFileFD(_fd, this, false); // reading
 	}
 	else if (_condition == SET)
@@ -123,9 +134,14 @@ void	Response::_writeFile(const std::string& fileName, const Request& req)
 	{
 		const std::string& method = req.getMethod();
 		if (method == "PUT")
-			_fd = open(fileName.c_str(), O_WRONLY | O_TRUNC, 0666);
+			_fd = open(fileName.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 		else if (method == "POST")
-			_fd = open(fileName.c_str(), O_WRONLY | O_APPEND, 0666);
+			_fd = open(fileName.c_str(), O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
+		if (_fd == -1)
+		{
+			std::cout << "errno: " << errno << std::endl;
+			throw std::runtime_error("Response: write open error");
+		}
 		FDManager::instance().addWriteFileFD(_fd, req.getBody(), this, false); // writing
 	}
 	else if (_condition == SET)
@@ -484,11 +500,15 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 	const std::vector<std::string> indexPages = location.getIndexPages();
 	std::vector<std::string>::const_iterator it = indexPages.begin();
 	std::vector<std::string>::const_iterator endIter = indexPages.end();
+	DIR *originDir = opendir(dirPath.c_str());
+	if (originDir == NULL)
+	{
+		std::cout << "errno: " << errno << std::endl;
+		throw 500;
+	}
 	while (it != endIter)
 	{
-		DIR *pDir = opendir(dirPath.c_str());
-		if (pDir == NULL)
-			throw 500;
+		DIR *pDir = originDir;
 		struct dirent *dirEnt;
 		bool found = false;
 		while ((dirEnt = readdir(pDir)) != NULL)
@@ -499,11 +519,11 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 				break ;
 			}
 		}
-		closedir(pDir);
 		if (found)
 			break ;
 		++it;
 	}
+	closedir(originDir);
 	if (it != endIter)
 		return (dirPath + (*it));
 	else
@@ -517,7 +537,7 @@ void		Response::_responseWithCGI(const Location& location, const std::string& pa
 	if (_condition == NOT_SET)
 	{
 		_cgi.setEnv(request, path);
-		_cgi.setPath("./tmp" + std::to_string(_socketNum));
+		_cgi.setPath("./tmp/" + std::to_string(_socketNum));
 		_cgi.execCGI(request, location, this, _cgi.getPath()); // fork -> write(QUERY) -> read
 	}
 	if (_condition == CGI_READ)
@@ -527,8 +547,7 @@ void		Response::_responseWithCGI(const Location& location, const std::string& pa
 		_fd = open(_cgi.getPath().c_str(), O_RDONLY);
 		if (_fd == -1)
 		{
-			std::cout << errno << std::endl;
-			std::cout << "망가짐" << std::endl;
+			throw std::runtime_error("Response: cgi read open error");
 		}
 		FDManager::instance().addReadFileFD(_fd, this, true);
 	}

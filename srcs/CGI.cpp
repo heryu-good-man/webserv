@@ -5,15 +5,17 @@
 #include "CGI.hpp"
 
 CGI::CGI()
-	: _env()
+	: _env(NULL)
+	, _path()
+	, _PID(0)
 {
 
 }
 
 CGI::CGI(const CGI& other)
-	: _env(other._env)
 {
-
+	if (this != &other)
+		*this = other;
 }
 
 CGI::~CGI()
@@ -25,7 +27,24 @@ CGI&    CGI::operator=(const CGI& rhs)
 {
 	if (this != &rhs)
 	{
-		_env = rhs._env;
+		if (_env != NULL)
+			_clearEnv();
+		// _env = rhs._env;
+		if (rhs._env != NULL)
+		{
+			size_t i = 0;
+			while (rhs._env[i])
+				++i;
+			_env = new char*[i + 1];
+			while (rhs._env[i])
+			{
+				_env[i] = strdup(rhs._env[i]);
+				i++;
+			}
+			_env[i] = NULL;
+		}
+		else
+			_env = rhs._env;
 		_path = rhs._path;
 		_PID = rhs._PID;
 	}
@@ -129,4 +148,5 @@ void    CGI::_clearEnv(void)
 		++i;
 	}
 	delete[] _env;
+	_env = NULL;
 }

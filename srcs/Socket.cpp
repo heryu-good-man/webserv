@@ -33,12 +33,12 @@ Socket		&Socket::operator=(const Socket &rvalue)
 {
 	if (this != &rvalue)
 	{
+		_socketFd = rvalue._socketFd;
 		_buffer = rvalue._buffer;
 		_readChecker = rvalue._readChecker;
-		_socketFd = rvalue._socketFd;
 		_bodyLen = rvalue._bodyLen;
-		_chunkedBuff = rvalue._chunkedBuff;
 		_startIndex = rvalue._startIndex;
+		_chunkedBuff = rvalue._chunkedBuff;
 		_endOfHeader = rvalue._endOfHeader;
 		_requestChecker = rvalue._requestChecker;
 		_request = rvalue._request;
