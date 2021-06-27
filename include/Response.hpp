@@ -63,14 +63,6 @@ public:
 	{
 		return _ret;
 	}
-	int	getCondition(void) const
-	{
-		return (_condition);
-	}
-	void setCondition(int condition)
-	{
-		_condition = condition;
-	}
 	size_t getWrittenSize(void) const
 	{
 		return (_writtenSize);
@@ -105,7 +97,6 @@ private:
 	int							_type;
 	int							_fd;
 	CGI							_cgi;
-	int							_condition;
 	size_t						_writtenSize;
 	int							_socketNum;
 

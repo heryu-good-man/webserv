@@ -116,10 +116,9 @@ void	FDManager::unsetFileFD(int fd, bool isReadSet, bool isWriteSet)
 		if (it != _writeFileFDs.end())
 			_writeFileFDs.erase(it);
 
-		_data.erase(fd);
-		_written.erase(fd);
+		_data.erase(_matchSocket[fd]);
+		_written.erase(_matchSocket[fd]);
 	}
-	_matchFDResponse.erase(fd);
 }
 
 int		FDManager::getMaxFD(void)
@@ -151,25 +150,27 @@ void	FDManager::addReadFileFD(int fd, Response* response, bool isCGI)
 {
 	_isCGI[fd] = isCGI;
 
-	_matchFDResponse[fd] = response;
+	_matchSocket[fd] = response->getSocketNum();
+	_matchCondition[response->getSocketNum()] = READING;
+
 	_readFileFDs.push_back(fd);
+	_result[response->getSocketNum()] = "";
 
 	setFD(fd, true, false);
-	response->setCondition(READING);
 }
 
 void	FDManager::addWriteFileFD(int fd, const std::string& data, Response* response, bool isCGI)
 {
 	_isCGI[fd] = isCGI;
 
-	_matchFDResponse.insert(std::make_pair(fd, response));
+	_matchSocket[fd] = response->getSocketNum();
+	_matchCondition[response->getSocketNum()] = WRITING;
+	
 	_writeFileFDs.push_back(fd);
-	_data.insert(std::make_pair(fd, data));
-	_written.insert(std::make_pair(fd, 0));
+	_data.insert(std::make_pair(response->getSocketNum(), data));
+	_written.insert(std::make_pair(response->getSocketNum(), 0));
 
 	setFD(fd, false, true);
-
-	response->setCondition(WRITING);
 }
 
 int		FDManager::readFile(int fd)
@@ -183,7 +184,7 @@ int		FDManager::readFile(int fd)
 	}
 	else if (ret == 0)	// end
 	{
-		_matchFDResponse[fd]->setCondition(SET);
+		_matchCondition[_matchSocket[fd]] = SET;
 		unsetFileFD(fd, true, false);
 		_isCGI.erase(fd);
 		return (SUCCESS);
@@ -191,29 +192,30 @@ int		FDManager::readFile(int fd)
 	else				// need more
 	{
 		buf[ret] = '\0';
-		_result[fd] += buf;
+		_result[_matchSocket[fd]] += buf;
 		return (MORE);
 	}
 }
 
 int		FDManager::writeFile(int fd)
 {
-	size_t writtenSize = _written[fd];
-	size_t rest = _data[fd].size() - writtenSize;
+	size_t writtenSize = _written[_matchSocket[fd]];
+	size_t rest = _data[_matchSocket[fd]].size() - writtenSize;
 	size_t writeSize = rest < 65530 ? rest : 65530;
-	int ret = write(fd, _data[fd].c_str() + writtenSize, writeSize);
+	int ret = write(fd, _data[_matchSocket[fd]].c_str() + writtenSize, writeSize);
 	if (ret == -1)				// error
 	{
 		unsetFileFD(fd, false, true);
 		return (ERROR);
 	}
-	_written[fd] += ret;
-	if (_written[fd] == _data[fd].size())	// end
+	_written[_matchSocket[fd]] += ret;
+	if (_written[_matchSocket[fd]] == _data[_matchSocket[fd]].size())	// end
 	{
 		if (_isCGI[fd])
-			_matchFDResponse[fd]->setCondition(CGI_READ);
+			_matchCondition[_matchSocket[fd]] = CGI_READ;
 		else
-			_matchFDResponse[fd]->setCondition(SET);
+			_matchCondition[_matchSocket[fd]] = SET;
+			// _matchFDResponse[fd]->setCondition(SET);
 		unsetFileFD(fd, false, true);
 		_isCGI.erase(fd);
 		return (SUCCESS);
@@ -226,7 +228,27 @@ int		FDManager::writeFile(int fd)
 
 std::string	FDManager::getResult(int fd)
 {
-	std::string tmp = _result[fd];
-	_result.erase(fd);
+	std::string tmp = _result[_matchSocket[fd]];
+	_result.erase(_matchSocket[fd]);
 	return (tmp);
+}
+
+int		FDManager::getConditionBySocket(int socket)
+{
+	return (_matchCondition[socket]);
+}
+
+int		FDManager::getConditionByFD(int fd)
+{
+	return (_matchCondition[_matchSocket[fd]]);
+}
+
+void	FDManager::setConditionBySocket(int socket, int condition)
+{
+	_matchCondition[socket] = condition;
+}
+
+void	FDManager::setConditionByFD(int fd, int condition)
+{
+	_matchCondition[_matchSocket[fd]] = condition;
 }

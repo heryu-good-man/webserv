@@ -8,7 +8,6 @@ Response::Response(void)
 	: _ret()
 	, _body()
 	, _statusCode(200)
-	, _condition(NOT_SET)
 	, _writtenSize(0)
 	, _socketNum(-1)
 {
@@ -42,7 +41,6 @@ Response		&Response::operator=(const Response &ref)
 		_type = ref._type;
 		_fd = ref._fd;
 		_cgi = ref._cgi;
-		_condition = ref._condition;
 		_writtenSize = ref._writtenSize;
 		_socketNum = ref._socketNum;
 
@@ -112,7 +110,7 @@ std::string	Response::makeErrorResponse(const Server& server, const std::string&
 
 std::string		Response::_readFile(const std::string& fileName)
 {
-	if (_condition == NOT_SET)
+	if (FDManager::instance().getConditionBySocket(getSocketNum()) == NOT_SET)
 	{
 		_fd = open(fileName.c_str(), O_RDONLY);
 		if (_fd == -1)
@@ -121,7 +119,7 @@ std::string		Response::_readFile(const std::string& fileName)
 		}
 		FDManager::instance().addReadFileFD(_fd, this, false); // reading
 	}
-	else if (_condition == SET)
+	else if (FDManager::instance().getConditionBySocket(getSocketNum()) == SET)
 	{
 		return (FDManager::instance().getResult(_fd));
 	}
@@ -130,7 +128,7 @@ std::string		Response::_readFile(const std::string& fileName)
 
 void	Response::_writeFile(const std::string& fileName, const Request& req)
 {
-	if (_condition == NOT_SET)
+	if (FDManager::instance().getConditionBySocket(getSocketNum()) == NOT_SET)
 	{
 		const std::string& method = req.getMethod();
 		if (method == "PUT")
@@ -144,7 +142,7 @@ void	Response::_writeFile(const std::string& fileName, const Request& req)
 		}
 		FDManager::instance().addWriteFileFD(_fd, req.getBody(), this, false); // writing
 	}
-	else if (_condition == SET)
+	else if (FDManager::instance().getConditionBySocket(getSocketNum()) == SET)
 	{
 		;
 	}
@@ -534,15 +532,16 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 void		Response::_responseWithCGI(const Location& location, const std::string& path, const Request& request)
 {
 	std::cout << "..cgi..." << std::endl;
-	if (_condition == NOT_SET)
+	if (FDManager::instance().getConditionBySocket(getSocketNum()) == NOT_SET)
 	{
 		_cgi.setEnv(request, path);
 		_cgi.setPath("./tmp/" + std::to_string(_socketNum));
 		_cgi.execCGI(request, location, this, _cgi.getPath()); // fork -> write(QUERY) -> read
 	}
-	if (_condition == CGI_READ)
+	if (FDManager::instance().getConditionBySocket(getSocketNum()) == CGI_READ)
 	{
-		waitpid(_cgi.getPID(), NULL, 0);
+		waitpid(-1, NULL, 0);
+		// waitpid(_cgi.getPID(), NULL, 0);
 		std::cout << "get or cgi_read" << std::endl;
 		_fd = open(_cgi.getPath().c_str(), O_RDONLY);
 		if (_fd == -1)
@@ -551,7 +550,7 @@ void		Response::_responseWithCGI(const Location& location, const std::string& pa
 		}
 		FDManager::instance().addReadFileFD(_fd, this, true);
 	}
-	if (_condition == SET)
+	if (FDManager::instance().getConditionBySocket(getSocketNum()) == SET)
 	{
 		remove(_cgi.getPath().c_str());
 		std::string fileContent = FDManager::instance().getResult(_fd);

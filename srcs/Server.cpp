@@ -329,9 +329,9 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator& iter)
 
 int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
 {
-	std::cout << "fd: " << iter->getSocketFd() << ": condition: " << iter->getResponse().getCondition() << std::endl;
+	std::cout << "fd: " << iter->getSocketFd() << ": condition: " << FDManager::instance().getConditionBySocket(iter->getSocketFd()) << std::endl;
 	iter->setRequestChecker(false);
-	int condition = iter->getResponse().getCondition();
+	int condition = FDManager::instance().getConditionBySocket(iter->getSocketFd());
 	if (condition == NOT_SET)
 	{
 		Request request(iter->getBuffer());
@@ -339,10 +339,10 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
 
 		iter->getResponse().setSocketNum(iter->getSocketFd());
 		iter->getResponse().response(*this, request);
-		if (iter->getResponse().getCondition() == NOT_SET)
+		if (FDManager::instance().getConditionBySocket(iter->getSocketFd()) == NOT_SET)
 		{
 			condition = ENABLE_WRITE;
-			iter->getResponse().setCondition(ENABLE_WRITE);
+			FDManager::instance().setConditionBySocket(iter->getSocketFd(), ENABLE_WRITE);
 		}
 	}
 	if (condition == CGI_READ)
@@ -360,7 +360,7 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
 		iter->getResponse().response(*this, request);
 
 		condition = ENABLE_WRITE;
-		iter->getResponse().setCondition(ENABLE_WRITE);
+		FDManager::instance().setConditionBySocket(iter->getSocketFd(), ENABLE_WRITE);
 	}
 	if (condition == ENABLE_WRITE)
 	{
@@ -379,18 +379,14 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
 		iter->getResponse().setWrittenSize(writtenSize + ret);
 		if (iter->getResponse().getWrittenSize() == message.size())
 		{
-			condition = END;
-			iter->getResponse().setCondition(END);
+			condition = NOT_SET;
+			FDManager::instance().setConditionBySocket(iter->getSocketFd(), NOT_SET);
 			iter->getResponse().setWrittenSize(0);
 
 			iter->setReadChecker(false);
 			iter->setStartIndex(0);
 			iter->clearBuffer();
 		}
-	}
-	if (condition == END)
-	{
-		iter->getResponse().setCondition(NOT_SET);
 	}
 	return 0;
 }

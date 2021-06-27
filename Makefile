@@ -32,6 +32,7 @@ clean :
 
 fclean : clean
 	rm -rf $(NAME)
+	rm -rf ./tmp/[0-9]*
 
 run : $(NAME)
 	./$(NAME)

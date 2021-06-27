@@ -20,7 +20,6 @@ class FDManager;
 # define WRITING		3
 # define ENABLE_WRITE	4
 # define CGI_READ		5
-# define END			6
 
 # define ERROR			0
 # define SUCCESS		1
@@ -52,6 +51,10 @@ public:
 	int		readFile(int fd);
 	int		writeFile(int fd);
 	std::string	getResult(int fd);
+	int 	getConditionBySocket(int socket);
+	int 	getConditionByFD(int fd);
+	void	setConditionBySocket(int socket, int condition);
+	void	setConditionByFD(int fd, int condition);
 
 private:
 	static FDManager*	_instance;
@@ -61,7 +64,8 @@ private:
 	fd_set								_readSet;
 	fd_set								_writeSet;
 
-	std::map<int, Response*>			_matchFDResponse;
+	std::map<int, int>					_matchSocket;
+	std::map<int, int>					_matchCondition;
 
 	std::vector<int>					_readFileFDs;
 	std::map<int, std::string>			_result;
