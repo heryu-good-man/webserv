@@ -64,6 +64,8 @@ private:
 	fd_set								_readSet;
 	fd_set								_writeSet;
 
+	// getSocketFd() => 5
+	// open() => 8 _matchSocket[8] = 5
 	std::map<int, int>					_matchSocket;
 	std::map<int, int>					_matchCondition;
 

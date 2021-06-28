@@ -540,8 +540,8 @@ void		Response::_responseWithCGI(const Location& location, const std::string& pa
 	}
 	if (FDManager::instance().getConditionBySocket(getSocketNum()) == CGI_READ)
 	{
-		waitpid(-1, NULL, 0);
-		// waitpid(_cgi.getPID(), NULL, 0);
+		// waitpid(-1, NULL, 0);
+		waitpid(_cgi.getPID(), NULL, 0);
 		std::cout << "get or cgi_read" << std::endl;
 		_fd = open(_cgi.getPath().c_str(), O_RDONLY);
 		if (_fd == -1)
