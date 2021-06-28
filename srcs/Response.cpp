@@ -48,7 +48,28 @@ Response		&Response::operator=(const Response &ref)
 	return *this;
 }
 
-void    Response::response(const Server& server, const Request& request)
+const std::string& Response::getMessage(void) const
+{
+	return _ret;
+}
+size_t Response::getWrittenSize(void) const
+{
+	return (_writtenSize);
+}
+void Response::setWrittenSize(size_t size)
+{
+	_writtenSize = size;
+}
+int Response::getSocketNum(void) const
+{
+	return (_socketNum);
+}
+void Response::setSocketNum(int num)
+{
+	_socketNum = num;
+}
+
+void	Response::response(const Server& server, const Request& request)
 {
 	try
 	{
@@ -76,76 +97,82 @@ void    Response::response(const Server& server, const Request& request)
 	{
 		_statusCode = code;
 		std::cout << code << std::endl;
-		_ret = makeErrorResponse(server, request.getMethod());
+		_ret = _makeErrorResponse(server, request.getMethod());
 	}
-	// std::cout << _statusCode << std::endl;
 }
 
-std::string	Response::makeErrorResponse(const Server& server, const std::string& method)
+void	Response::_responseRedirect(const Location& location)
 {
-	setStatusMap();
-
-	std::map<int, std::string>* StatusMap = getStatusMap();
-	std::string statusText = StatusMap->find(_statusCode)->second;
-	std::string status = std::to_string(_statusCode) + " " + statusText;
-	std::string body;
-	const std::string errorPagePath = server.getErrorPage(_statusCode);
-	if (!errorPagePath.empty() && _getType(errorPagePath) == TYPE_FILE)
-		body = _readFile(errorPagePath);
+	const std::string& value = location.getReturn();
+	std::pair<std::string, std::string> p = splitString(value, " ");
+	if (p.first == "301")
+	{
+		_ret = "";
+		_ret += "HTTP/1.1 301 Moved Permanantly\r\n";
+		_ret += "Server: webserv\r\n";
+		_ret += "Location: " + p.second + "\r\n";
+		_ret += "\r\n";
+	}
 	else
-		body = status;
-
-	std::string ret = "HTTP/1.1 ";
-	ret += status;
-	ret += "\r\nContent-Type: text/html";
-	ret += "\r\nContent-Length: ";
-	ret += std::to_string(body.size());
-	ret += "\r\n\r\n";
-	if (method != "HEAD")
-		ret += body;
-
-	unsetStatusMap();
-	return (ret);
+		throw 500;
 }
 
-std::string		Response::_readFile(const std::string& fileName)
+void	Response::_responseWithCGI(const Location& location, const std::string& path, const Request& request)
 {
+	std::cout << "..cgi..." << std::endl;
 	if (FDManager::instance().getConditionBySocket(getSocketNum()) == NOT_SET)
 	{
-		_fd = open(fileName.c_str(), O_RDONLY);
+		_cgi.setEnv(request, path);
+		_cgi.setPath("./tmp/" + std::to_string(_socketNum));
+		_cgi.execCGI(request, location, this, _cgi.getPath()); // fork -> write(QUERY) -> read
+	}
+	if (FDManager::instance().getConditionBySocket(getSocketNum()) == CGI_READ)
+	{
+		// waitpid(-1, NULL, 0);
+		waitpid(_cgi.getPID(), NULL, 0);
+		std::cout << "get or cgi_read" << std::endl;
+		_fd = open(_cgi.getPath().c_str(), O_RDONLY);
 		if (_fd == -1)
 		{
-			throw std::runtime_error("Response: read open error");
+			throw std::runtime_error("Response: cgi read open error");
 		}
-		FDManager::instance().addReadFileFD(_fd, this, false); // reading
+		FDManager::instance().addReadFileFD(_fd, this, true);
 	}
-	else if (FDManager::instance().getConditionBySocket(getSocketNum()) == SET)
+	if (FDManager::instance().getConditionBySocket(getSocketNum()) == SET)
 	{
-		return (FDManager::instance().getResult(_fd));
+		remove(_cgi.getPath().c_str());
+		std::string fileContent = FDManager::instance().getResult(_socketNum);
+		size_t findCRLF = fileContent.find("\r\n\r\n");
+		size_t contentLength = fileContent.size() - (findCRLF + 4);
+
+		std::cout << "findCRLF: " << findCRLF << std::endl;
+		std::cout << "contentLength: " << contentLength << std::endl;
+
+		std::string startLine = "HTTP/1.1 200 OK\r\n";
+		std::string header = fileContent.substr(0, findCRLF);
+		_ret = "";
+		_ret += startLine;
+		_ret += header;
+		_ret += "\r\n";
+		_ret += "Content-Length: " + std::to_string(contentLength);
+		_ret += "\r\n\r\n";
+		_ret += fileContent.substr(findCRLF + 4);
 	}
-	return (std::string(""));
 }
 
-void	Response::_writeFile(const std::string& fileName, const Request& req)
+void	Response::_responseGET(const Location& location, const std::string& realPath, const Request& request, bool isGET)
 {
-	if (FDManager::instance().getConditionBySocket(getSocketNum()) == NOT_SET)
-	{
-		const std::string& method = req.getMethod();
-		if (method == "PUT")
-			_fd = open(fileName.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-		else if (method == "POST")
-			_fd = open(fileName.c_str(), O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
-		if (_fd == -1)
-		{
-			std::cout << "errno: " << errno << std::endl;
-			throw std::runtime_error("Response: write open error");
-		}
-		FDManager::instance().addWriteFileFD(_fd, req.getBody(), this, false); // writing
-	}
-	else if (FDManager::instance().getConditionBySocket(getSocketNum()) == SET)
-	{
-		;
-	}
+	_type = _getType(realPath);
+	if (_type == TYPE_FILE)
+		_setBodyFromFile(realPath);
+	else if (_type == TYPE_DIR)
+		_setBodyFromDir(realPath, location, request);
+	else	// not found
+		throw 404;
+	_writeStartLine();
+	_writeHeaders();
+	if (isGET)
+		_writeBody();
 }
 
 void	Response::_responsePUTorPOST(const Location& location, const std::string& path, const Request& request)
@@ -194,6 +221,98 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 	_contentType = "text/plain";
 	_writeHeaders();
 	_writeBody();
+}
+
+void Response::_responseDELETE(const Location& location, const std::string& path)
+{
+	int type = _getType(path);
+	if (type == TYPE_DIR)
+	{
+		// search index -> 없으면 404 error
+		std::string indexPage = _getIndexPage(path, location);
+		if (indexPage.empty())
+			throw 404;
+		// 있으면 삭제
+		remove(indexPage.c_str());
+	}
+	else if (type == TYPE_FILE)
+	{
+		remove(path.c_str());
+	}
+	else // not found
+		throw 404;
+	_body = "200 Delete";
+	_writeStartLine();
+	_contentType = "text/plain";
+	_writeHeaders();
+	_writeBody();
+}
+
+std::string	Response::_makeErrorResponse(const Server& server, const std::string& method)
+{
+	_setStatusMap();
+
+	std::map<int, std::string>* StatusMap = _getStatusMap();
+	std::string statusText = StatusMap->find(_statusCode)->second;
+	std::string status = std::to_string(_statusCode) + " " + statusText;
+	std::string body;
+	const std::string errorPagePath = server.getErrorPage(_statusCode);
+	if (!errorPagePath.empty() && _getType(errorPagePath) == TYPE_FILE)
+		body = _readFile(errorPagePath);
+	else
+		body = status;
+
+	std::string ret = "HTTP/1.1 ";
+	ret += status;
+	ret += "\r\nContent-Type: text/html";
+	ret += "\r\nContent-Length: ";
+	ret += std::to_string(body.size());
+	ret += "\r\n\r\n";
+	if (method != "HEAD")
+		ret += body;
+
+	_unsetStatusMap();
+	return (ret);
+}
+
+std::string		Response::_readFile(const std::string& fileName)
+{
+	if (FDManager::instance().getConditionBySocket(getSocketNum()) == NOT_SET)
+	{
+		_fd = open(fileName.c_str(), O_RDONLY);
+		if (_fd == -1)
+		{
+			throw std::runtime_error("Response: read open error");
+		}
+		FDManager::instance().addReadFileFD(_fd, this, false); // reading
+	}
+	else if (FDManager::instance().getConditionBySocket(getSocketNum()) == SET)
+	{
+		return (FDManager::instance().getResult(_socketNum));
+	}
+	return (std::string(""));
+}
+
+void	Response::_writeFile(const std::string& fileName, const Request& req)
+{
+	if (FDManager::instance().getConditionBySocket(getSocketNum()) == NOT_SET)
+	{
+		const std::string& method = req.getMethod();
+		if (method == "PUT")
+			_fd = open(fileName.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		else if (method == "POST")
+			_fd = open(fileName.c_str(), O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
+		if (_fd == -1)
+		{
+			std::cout << "errno: " << errno << std::endl;
+			throw std::runtime_error("Response: write open error");
+		}
+		FDManager::instance().addWriteFileFD(_fd, req.getBody(), this, false); // writing
+	}
+	else if (FDManager::instance().getConditionBySocket(getSocketNum()) == SET)
+	{
+		;
+	}
 }
 
 bool	Response::_isCGIRequest(const Location& location, const std::string& CGIExtension, std::string& path)
@@ -252,36 +371,7 @@ void	Response::_writeBody(void)
 	_ret += _body;
 }
 
-void	Response::_responseRedirect(const Location& location)
-{
-	const std::string& value = location.getReturn();
-	std::pair<std::string, std::string> p = splitString(value, " ");
-	if (p.first == "301")
-	{
-		_ret = "";
-		_ret += "HTTP/1.1 301 Moved Permanantly\r\n";
-		_ret += "Server: webserv\r\n";
-		_ret += "Location: " + p.second + "\r\n";
-		_ret += "\r\n";
-	}
-	else
-		throw 500;
-}
 
-void	Response::_responseGET(const Location& location, const std::string& realPath, const Request& request, bool isGET)
-{
-	_type = _getType(realPath);
-	if (_type == TYPE_FILE)
-		_setBodyFromFile(realPath);
-	else if (_type == TYPE_DIR)
-		_setBodyFromDir(realPath, location, request);
-	else	// not found
-		throw 404;
-	_writeStartLine();
-	_writeHeaders();
-	if (isGET)
-		_writeBody();
-}
 
 void	Response::_isValidHTTPVersion(const std::string& httpVersion) const
 {
@@ -465,31 +555,6 @@ void Response::_setBodyFromAutoIndex(const Request& request, const std::string& 
 	_contentType = "text/html";
 }
 
-void Response::_responseDELETE(const Location& location, const std::string& path)
-{
-	int type = _getType(path);
-	if (type == TYPE_DIR)
-	{
-		// search index -> 없으면 404 error
-		std::string indexPage = _getIndexPage(path, location);
-		if (indexPage.empty())
-			throw 404;
-		// 있으면 삭제
-		remove(indexPage.c_str());
-	}
-	else if (type == TYPE_FILE)
-	{
-		remove(path.c_str());
-	}
-	else // not found
-		throw 404;
-	_body = "200 Delete";
-	_writeStartLine();
-	_contentType = "text/plain";
-	_writeHeaders();
-	_writeBody();
-}
-
 std::string Response::_getIndexPage(const std::string& path, const Location& location)
 {
 	std::string dirPath = path;
@@ -528,60 +593,35 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 		return (std::string());
 }
 
-
-void		Response::_responseWithCGI(const Location& location, const std::string& path, const Request& request)
+std::map<int, std::string>* Response::_getStatusMap(void)
 {
-	std::cout << "..cgi..." << std::endl;
-	if (FDManager::instance().getConditionBySocket(getSocketNum()) == NOT_SET)
-	{
-		_cgi.setEnv(request, path);
-		_cgi.setPath("./tmp/" + std::to_string(_socketNum));
-		_cgi.execCGI(request, location, this, _cgi.getPath()); // fork -> write(QUERY) -> read
-	}
-	if (FDManager::instance().getConditionBySocket(getSocketNum()) == CGI_READ)
-	{
-		// waitpid(-1, NULL, 0);
-		waitpid(_cgi.getPID(), NULL, 0);
-		std::cout << "get or cgi_read" << std::endl;
-		_fd = open(_cgi.getPath().c_str(), O_RDONLY);
-		if (_fd == -1)
-		{
-			throw std::runtime_error("Response: cgi read open error");
-		}
-		FDManager::instance().addReadFileFD(_fd, this, true);
-	}
-	if (FDManager::instance().getConditionBySocket(getSocketNum()) == SET)
-	{
-		remove(_cgi.getPath().c_str());
-		std::string fileContent = FDManager::instance().getResult(_fd);
-		size_t findCRLF = fileContent.find("\r\n\r\n");
-		size_t contentLength = fileContent.size() - (findCRLF + 4);
+	return _statusMap;
+}
 
-		std::cout << "findCRLF: " << findCRLF << std::endl;
-		std::cout << "contentLength: " << contentLength << std::endl;
+const CGI& Response::_getCGI(void) const
+{
+	return (_cgi);
+}
 
-		std::string startLine = "HTTP/1.1 200 OK\r\n";
-		std::string header = fileContent.substr(0, findCRLF);
-		_ret = "";
-		_ret += startLine;
-		_ret += header;
-		_ret += "\r\n";
-		_ret += "Content-Length: " + std::to_string(contentLength);
-		_ret += "\r\n\r\n";
-		_ret += fileContent.substr(findCRLF + 4);
-	}
-
-	// int fd = open("./tmp.txt", O_RDONLY);
-	// std::string fileContent;
-	// char buf[30001];
-	// int ret = 0;
-	// while ((ret = read(fd, buf, 30000)) > 0)
-	// {
-	// 	buf[ret] = '\0';
-	// 	fileContent += buf;
-	// }
-	// close(fd);
-	// remove("./tmp.txt");
-
-
+void		Response::_setStatusMap(void)
+{
+	_statusMap = new std::map<int, std::string>;
+	_statusMap->insert(std::pair<int, std::string>(200, "OK"));
+	_statusMap->insert(std::pair<int, std::string>(201, "Created"));
+	_statusMap->insert(std::pair<int, std::string>(301, "Moved Permanantly"));
+	_statusMap->insert(std::pair<int, std::string>(400, "Bad Request"));
+	_statusMap->insert(std::pair<int, std::string>(403, "Forbidden"));
+	_statusMap->insert(std::pair<int, std::string>(404, "Not found"));
+	_statusMap->insert(std::pair<int, std::string>(405, "Not Allowed Method"));
+	_statusMap->insert(std::pair<int, std::string>(413, "Payload Too Large"));
+	_statusMap->insert(std::pair<int, std::string>(500, "Internal Server Error"));
+	_statusMap->insert(std::pair<int, std::string>(501, "Not Implemented"));
+	_statusMap->insert(std::pair<int, std::string>(502, "Bad Gateway"));
+	_statusMap->insert(std::pair<int, std::string>(503, "Service Unavailable"));
+	_statusMap->insert(std::pair<int, std::string>(505, "HTTP Version Not Supported"));
+}
+void		Response::_unsetStatusMap(void)
+{
+	_statusMap->clear();
+	delete _statusMap;
 }

@@ -2,9 +2,30 @@
 #include <vector>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include "Config.hpp"
 #include "FDManager.hpp"
 #include "Server.hpp"
+
+void	handleSignal(int signal)
+{
+	std::cout << "signal  : " << signal << std::endl;
+	
+	close(0);
+	close(1);
+	close(2);
+	for (int i = 3; i < OPEN_MAX + 1; i++)
+	{
+		// dup을 하면 fd가 늘어나서 fd가 가득 찬 경우에는 문제가 생길 수도 있지만 나중에 생각.
+		int tmp = dup(i);
+		if (tmp != -1)
+		{
+			close(tmp);
+			close(i);
+		}
+	}
+	exit(signal);
+}
 
 int main(int argc, char** argv)
 {
@@ -13,7 +34,10 @@ int main(int argc, char** argv)
 		std::cout << "invalid argument(Usage ./webserv [CONFIG_FILE])" << std::endl;
 		return (1);
 	}
-
+	
+	signal(SIGINT, handleSignal);
+	
+	
 	Config conf;
 	try
 	{

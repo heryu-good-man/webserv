@@ -32,57 +32,12 @@ public:
 	Response &operator=(const Response &ref);
 
 	void	response(const Server& server, const Request& request);
-	void	setStatusMap()
-	{
-		_statusMap = new std::map<int, std::string>;
-		_statusMap->insert(std::pair<int, std::string>(200, "OK"));
-		_statusMap->insert(std::pair<int, std::string>(201, "Created"));
-		_statusMap->insert(std::pair<int, std::string>(301, "Moved Permanantly"));
-		_statusMap->insert(std::pair<int, std::string>(400, "Bad Request"));
-		_statusMap->insert(std::pair<int, std::string>(403, "Forbidden"));
-		_statusMap->insert(std::pair<int, std::string>(404, "Not found"));
-		_statusMap->insert(std::pair<int, std::string>(405, "Not Allowed Method"));
-		_statusMap->insert(std::pair<int, std::string>(413, "Payload Too Large"));
-		_statusMap->insert(std::pair<int, std::string>(500, "Internal Server Error"));
-		_statusMap->insert(std::pair<int, std::string>(501, "Not Implemented"));
-		_statusMap->insert(std::pair<int, std::string>(502, "Bad Gateway"));
-		_statusMap->insert(std::pair<int, std::string>(503, "Service Unavailable"));
-		_statusMap->insert(std::pair<int, std::string>(505, "HTTP Version Not Supported"));
-	}
-	void	unsetStatusMap(void)
-	{
-		_statusMap->clear();
-		delete _statusMap;
-	}
-	std::map<int, std::string>* getStatusMap(void)
-	{
-		return _statusMap;
-	}
-	std::string makeErrorResponse(const Server& server, const std::string& req);
-	const std::string& getMessage(void) const
-	{
-		return _ret;
-	}
-	size_t getWrittenSize(void) const
-	{
-		return (_writtenSize);
-	}
-	void setWrittenSize(size_t size)
-	{
-		_writtenSize = size;
-	}
-	int getSocketNum(void) const
-	{
-		return (_socketNum);
-	}
-	void setSocketNum(int num)
-	{
-		_socketNum = num;
-	}
-	const CGI& getCGI(void) const
-	{
-		return (_cgi);
-	}
+	const std::string& getMessage(void) const;
+	size_t	getWrittenSize(void) const;
+	void	setWrittenSize(size_t size);
+	int		getSocketNum(void) const;
+	void	setSocketNum(int num);
+
 
 private:
 	std::string					_ret;
@@ -106,7 +61,6 @@ private:
 	void 		_responseDELETE(const Location& location, const std::string& path);
 	void		_responsePUTorPOST(const Location& location, const std::string& path, const Request& request);
 	void		_responseWithCGI(const Location& location, const std::string& path, const Request& request);
-	// void		_responsePOSTwithCGI(const Location& location, const std::string& path, const Request& request);
 
 	void		_writeFile(const std::string& fileName, const Request& req);
 	std::string	_readFile(const std::string& fileName);
@@ -122,11 +76,16 @@ private:
 	void		_setBodyFromFile(const std::string& fileName);
 	void		_setBodyFromDir(const std::string& dirPath, const Location&, const Request&);
 	void 		_setBodyFromAutoIndex(const Request& request, const std::string& dirPath);
+	std::map<int, std::string>* _getStatusMap(void);
+	const CGI& _getCGI(void) const;
 
 	void		_writeStartLine(void);
 	void		_writeHeaders(void);
 	void		_writeBody(void);
 
+	void		_setStatusMap(void);
+	void		_unsetStatusMap(void);
+	std::string _makeErrorResponse(const Server& server, const std::string& req);
 };
 
 #endif

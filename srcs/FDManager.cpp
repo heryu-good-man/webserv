@@ -226,10 +226,10 @@ int		FDManager::writeFile(int fd)
 	}
 }
 
-std::string	FDManager::getResult(int fd)
+std::string	FDManager::getResult(int socket)
 {
-	std::string tmp = _result[_matchSocket[fd]];
-	_result.erase(_matchSocket[fd]);
+	std::string tmp = _result[socket];
+	_result.erase(socket);
 	return (tmp);
 }
 

@@ -50,7 +50,7 @@ public:
 	void		addWriteFileFD(int fd, const std::string& data, Response* response, bool isCGI);
 	int			readFile(int fd);
 	int			writeFile(int fd);
-	std::string	getResult(int fd);
+	std::string	getResult(int socket);
 	int 		getConditionBySocket(int socket);
 	int 		getConditionByFD(int fd);
 	void		setConditionBySocket(int socket, int condition);

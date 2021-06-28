@@ -221,16 +221,20 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator& iter)
 			if (contentSize.fail())
 				throw 400;
 			iter->setBodyLen(n);
-			// 여기 없애야 할거 같은데 나중에 생각하자
-			if ((n = read(iter->getSocketFd(), buff, MAXBUFF)) != 0)
+			if (iter->getBuffer().size() - (iter->getStartIndex()) <= static_cast<size_t>(iter->getBodyLen()))
+			{
+				iter->setReadChecker(true);
+				iter->setRequestChecker(false);
+			}
+			else if ((n = read(iter->getSocketFd(), buff, MAXBUFF)) != 0)
 			{
 				buff[n] = '\0';
 				iter->addStringToBuff(buff);
-				// 내가 원하는 만큼 버퍼에 가득 찼다
-				std::cout << "buffer size : " << iter->getBuffer().size() << std::endl;
-				std::cout << "startindex : " << iter->getStartIndex() << std::endl;
 				if (iter->getBuffer().size() - (iter->getStartIndex()) <= static_cast<size_t>(iter->getBodyLen()))
+				{
 					iter->setReadChecker(true);
+					iter->setRequestChecker(false);
+				}
 			}
 		}
 		else if (encodingIter != reqEnd)
