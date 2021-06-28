@@ -14,28 +14,28 @@ class CGI;
 class CGI
 {
 public:
-    CGI();
-    CGI(const CGI& other);
-    virtual ~CGI();
-    CGI&    operator=(const CGI& rhs);
+	CGI();
+	CGI(const CGI& other);
+	virtual ~CGI();
+	CGI&    operator=(const CGI& rhs);
 
-    void    setEnv(const Request& request, const std::string path);
-    void    execCGI(const Request& request, const Location& location, Response* response, const std::string& path);
+	void    setEnv(const Request& request, const std::string path);
+	void    execCGI(const Request& request, const Location& location, Response* response, const std::string& path);
 
-    void               setPath(std::string path);
-    const std::string& getPath(void) const;
+	void               setPath(std::string path);
+	const std::string& getPath(void) const;
 
-    void               setPID(pid_t pid);
-    pid_t              getPID(void) const;
+	void               setPID(pid_t pid);
+	pid_t              getPID(void) const;
 
 
 
 private:
-    char**      _env;
-    std::string _path;
-    pid_t       _PID;
+	char**      _env;
+	std::string _path;
+	pid_t       _PID;
 
-    void    _clearEnv(void);
+	void    _clearEnv(void);
 
 };
 

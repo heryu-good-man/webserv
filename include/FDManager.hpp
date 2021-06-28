@@ -40,32 +40,30 @@ public:
 	void	unsetFD(int fd, bool isReadSet, bool isWriteSet);
 	void	unsetFileFD(int fd, bool isReadSet, bool isWriteSet);
 
-	int		getMaxFD(void);
-	fd_set	getReadSet(void);
-	fd_set	getWriteSet(void);
+	int						getMaxFD(void);
+	fd_set					getReadSet(void);
+	fd_set					getWriteSet(void);
 	const std::vector<int>&	getReadFileFDs(void);
 	const std::vector<int>&	getWriteFileFDs(void);
 
-	void	addReadFileFD(int fd, Response* response, bool isCGI);
-	void	addWriteFileFD(int fd, const std::string& data, Response* response, bool isCGI);
-	int		readFile(int fd);
-	int		writeFile(int fd);
+	void		addReadFileFD(int fd, Response* response, bool isCGI);
+	void		addWriteFileFD(int fd, const std::string& data, Response* response, bool isCGI);
+	int			readFile(int fd);
+	int			writeFile(int fd);
 	std::string	getResult(int fd);
-	int 	getConditionBySocket(int socket);
-	int 	getConditionByFD(int fd);
-	void	setConditionBySocket(int socket, int condition);
-	void	setConditionByFD(int fd, int condition);
+	int 		getConditionBySocket(int socket);
+	int 		getConditionByFD(int fd);
+	void		setConditionBySocket(int socket, int condition);
+	void		setConditionByFD(int fd, int condition);
 
 private:
 	static FDManager*	_instance;
 
-	std::vector<int>					_allFDs;
-	int									_maxFD;
-	fd_set								_readSet;
-	fd_set								_writeSet;
+	std::vector<int>	_allFDs;
+	int					_maxFD;
+	fd_set				_readSet;
+	fd_set				_writeSet;
 
-	// getSocketFd() => 5
-	// open() => 8 _matchSocket[8] = 5
 	std::map<int, int>					_matchSocket;
 	std::map<int, int>					_matchCondition;
 

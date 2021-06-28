@@ -78,7 +78,12 @@ void    CGI::setEnv(const Request& request, const std::string path)
 	envVal.push_back("SCRIPT_NAME=" + path2);
 	envVal.push_back("REQUEST_URI=" + path2);
 	envVal.push_back("REDIRECT_STATUS=200");
-	envVal.push_back("HTTP_X_SECRET_HEADER_FOR_TEST=1");
+	if (request.getHeaders().find("X-Secret-Header-For-Test") != request.getHeaders().end())
+	{
+		std::string tmp = "HTTP_X_SECRET_HEADER_FOR_TEST=";
+		tmp += request.getHeaders().find("X-Secret-Header-For-Test")->second;
+		envVal.push_back(tmp);
+	}
 
 	for (size_t i = 0; i < envVal.size(); i++)
 		_env[i] = strdup(envVal[i].c_str());
@@ -88,8 +93,12 @@ void    CGI::setEnv(const Request& request, const std::string path)
 void    CGI::execCGI(const Request& request, const Location& location, Response* response, const std::string& path)
 {
 	int fd[2];
-	pipe(fd);
 	int originfd[2];
+
+	pipe(fd);
+	fcntl(fd[0], F_SETFL, O_NONBLOCK);
+	fcntl(fd[1], F_SETFL, O_NONBLOCK);
+
 	originfd[0] = dup(0);
 	originfd[1] = dup(1);
 	// int tmp_fd;
