@@ -290,15 +290,15 @@ bool	Config::_isValidConfig(void) const
 		else
 			return (false);
 
-		if (hostChecker[_servers[i]._host] == 0)		// host 중복
-			hostChecker[_servers[i]._host] = 1;
-		else
-			return (false);
+		// if (hostChecker[_servers[i]._host] == 0)		// host 중복
+		// 	hostChecker[_servers[i]._host] = 1;
+		// else
+		// 	return (false);
 
-		if (nameChecker[_servers[i]._serverName] == 0)	// server name 중복
-			nameChecker[_servers[i]._serverName] = 1;
-		else
-			return (false);
+		// if (nameChecker[_servers[i]._serverName] == 0)	// server name 중복
+		// 	nameChecker[_servers[i]._serverName] = 1;
+		// else
+		// 	return (false);
 
 		// No Location
 		size_t locationCount = _servers[i]._locations.size();
