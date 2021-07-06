@@ -215,7 +215,6 @@ int		FDManager::writeFile(int fd)
 			_matchCondition[_matchSocket[fd]] = CGI_READ;
 		else
 			_matchCondition[_matchSocket[fd]] = SET;
-			// _matchFDResponse[fd]->setCondition(SET);
 		unsetFileFD(fd, false, true);
 		_isCGI.erase(fd);
 		return (SUCCESS);

@@ -9,14 +9,13 @@
 
 void	handleSignal(int signal)
 {
-	std::cout << "signal  : " << signal << std::endl;
+	std::cout << "\nSERVER OFF" << std::endl;
 	
 	close(0);
 	close(1);
 	close(2);
 	for (int i = 3; i < OPEN_MAX + 1; i++)
 	{
-		// dup을 하면 fd가 늘어나서 fd가 가득 찬 경우에는 문제가 생길 수도 있지만 나중에 생각.
 		int tmp = dup(i);
 		if (tmp != -1)
 		{
@@ -34,10 +33,8 @@ int main(int argc, char** argv)
 		std::cout << "invalid argument(Usage ./webserv [CONFIG_FILE])" << std::endl;
 		return (1);
 	}
-	
+
 	signal(SIGINT, handleSignal);
-	
-	
 	Config conf;
 	try
 	{
@@ -49,16 +46,13 @@ int main(int argc, char** argv)
 		return (1);
 	}
 
-	// ServerManager manager;
-	// manager._fdManager[3] = server1;
 	std::vector<Server> servers = conf.getServers();
 	size_t serversSize = servers.size();
 	for (size_t i = 0; i < serversSize; i++)
 	{
-		std::cout << "PORT : " << servers[i]._port << std::endl;
+		std::cout << "OPEN PORT : " << servers[i]._port << std::endl;
 	}
 
-	// 각 테스트 서버 bind, listen, setListenSocket readSet에다 넣기.
 	std::vector<Server>::iterator endI = servers.end();
 	for (std::vector<Server>::iterator i = servers.begin(); i != endI; i++)
 	{
@@ -66,71 +60,77 @@ int main(int argc, char** argv)
 		i->setAddress();
 		if (i->bindSelf() == -1)
 		{
-			std::cout << "bind 실패!!\n";
+			std::cout << "BIND FAIL" << std::endl;
 			return -1;
 		}
 		if (i->listenSelf(1000) == -1)
 		{
-			std::cout << "listen 실패!!\n";
+			std::cout << "LISTEN FAIL" << std::endl;
 			return -1;
 		}
 		FDManager::instance().setFD(i->getListenSocket(), true, false);
 	}
-	fd_set copyRead;
-	fd_set copyWrite;
+
 	while (1)
 	{
 		usleep(50);
-		copyRead = FDManager::instance().getReadSet();
-		copyWrite = FDManager::instance().getWriteSet();
 
+		fd_set copyRead = FDManager::instance().getReadSet();
+		fd_set copyWrite = FDManager::instance().getWriteSet();
 		if (select(FDManager::instance().getMaxFD() + 1, &copyRead, &copyWrite, NULL, NULL) == -1)
 		{
-			std::cout << "select Fail!!!!\n";
+			std::cout << "SELECT FAIL" << std::endl;
 			FDManager::instance().clearFD();
-			exit (-1);
+			exit (1);
 		}
 
-		for (std::vector<Server>::iterator iter = servers.begin(); iter != servers.end(); iter++)
+		try 
 		{
-			if (FD_ISSET(iter->getListenSocket(), &copyRead))
-				iter->acceptSocket();
-			else
-				iter->checkSet(&copyRead, &copyWrite);
-			// usleep(50);
-		}
+			for (std::vector<Server>::iterator iter = servers.begin(); iter != servers.end(); iter++)
+			{
+				if (FD_ISSET(iter->getListenSocket(), &copyRead))
+					iter->acceptSocket();
+				else
+					iter->checkSet(&copyRead, &copyWrite);
+			}
 
-		for (std::vector<int>::const_iterator iter = FDManager::instance().getReadFileFDs().begin();
-				iter != FDManager::instance().getReadFileFDs().end(); )
-		{
-			if (FD_ISSET(*iter, &copyRead))
+			for (std::vector<int>::const_iterator iter = FDManager::instance().getReadFileFDs().begin();
+					iter != FDManager::instance().getReadFileFDs().end(); )
 			{
-				int ret = FDManager::instance().readFile(*iter);
-				if (ret == ERROR)
-					throw std::runtime_error("FDManager::readFile error");
-				else if (ret == MORE)
+				if (FD_ISSET(*iter, &copyRead))
+				{
+					int ret = FDManager::instance().readFile(*iter);
+					if (ret == ERROR)
+						throw std::runtime_error("FDManager::readFile FAIL");
+					else if (ret == MORE)
+						++iter;
+					else  // success
+						;
+				}
+				else
 					++iter;
-				else  // success
-					;
 			}
-			else
-				++iter;
+
+			for (std::vector<int>::const_iterator iter = FDManager::instance().getWriteFileFDs().begin();
+					iter != FDManager::instance().getWriteFileFDs().end(); )
+			{
+				if (FD_ISSET(*iter, &copyWrite))
+				{
+					int ret = FDManager::instance().writeFile(*iter);
+					if (ret == ERROR)
+						throw std::runtime_error("FDManager::writeFile FAIL");
+					else if (ret == MORE)
+						++iter;
+					else  // success
+						;
+				}
+				else
+					++iter;
+			}
 		}
-		for (std::vector<int>::const_iterator iter = FDManager::instance().getWriteFileFDs().begin();
-				iter != FDManager::instance().getWriteFileFDs().end(); )
+		catch (const std::exception& e)
 		{
-			if (FD_ISSET(*iter, &copyWrite))
-			{
-				int ret = FDManager::instance().writeFile(*iter);
-				if (ret == ERROR)
-					throw std::runtime_error("FDManager::writeFile error");
-				else if (ret == MORE)
-					++iter;
-				else  // success
-					;
-			}
-			else
-				++iter;
+			std::cout << e.what() << std::endl;
 		}
 	}
 }

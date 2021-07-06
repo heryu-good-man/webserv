@@ -1,6 +1,6 @@
 #include "Server.hpp"
 
-const std::string		DEFAULT_HOST = "localhost";		// 변경 필요
+const std::string		DEFAULT_HOST = "localhost";
 const size_t			DEFAULT_PORT = 8080;
 const std::string		DEFAULT_SERVER_NAME = "localhost";
 
@@ -128,7 +128,7 @@ void	Server::_setErrorPage(const std::string& value)
 
 void	Server::setAddress(void)
 {
-	// listensocket 할당.???
+	// listensocket 할당
 	// sAddr 초기화
 	memset(&_sAddr, 0, sizeof(_sAddr));
 	_sAddr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -164,16 +164,14 @@ void	Server::acceptSocket(void)
 	int tmpSock = accept(_listenSocket, (struct sockaddr *) &_cAddr, (socklen_t *)&len);
 	FDManager::instance().setFD(tmpSock, true, true);
 	_sockets.push_back(Socket(tmpSock));
-	std::cout << "accept socket fd: " << tmpSock << std::endl;
+	std::cout << "ACCEPT SOCKET FD: " << tmpSock << std::endl;
 }
 
 void	Server::checkSet(fd_set *copyr, fd_set *copyw)
 {
 	std::vector<Socket>::iterator iter = _sockets.begin();
-	// int i = 0;
 	for (; iter != _sockets.end(); iter++)
 	{
-		// std::cout << i++ << "번째 소켓!!\n";
 		if (FD_ISSET(iter->getSocketFd(), copyr))
 		{
 			if (_checkReadSetAndExit(iter))
@@ -277,12 +275,10 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator& iter)
 
 int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator& iter)
 {
-	// char	*buff = new char[MAXBUFF + 1];
 	char	buff[MAXBUFF + 1];
 	int		n;
 	int		pos = 0;
 
-	// if ((n = read(iter->getSocketFd(), buff, MAXBUFF)) != 0)
 	if ((n = read(iter->getSocketFd(), buff, MAXBUFF)) != 0)
 	{
 		try
@@ -290,56 +286,46 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator& iter)
 			if (n == -1)
 				return _socketDisconnect(iter);
 			buff[n] = '\0';
-			// std::cout << "2345" << std::endl;
-			// std::cout << "real2 buf size: " << iter->getBuffer().size() << std::endl;
 			iter->addStringToBuff(buff);
-			// std::cout << "real3 buf size: " << iter->getBuffer().size() << std::endl;
 			pos = iter->getBuffer().find("\r\n\r\n");
 			if (pos != -1 && iter->getRequestChecker() == true)
 			{
-				// std::cout << "reading...\n";x
 				_setReadEnd(iter);
-				// delete[] buff;
 			}
 			else if (pos != -1 && iter->getRequestChecker() == false)
 			{
 				iter->setRequest(iter->getBuffer());
 				iter->getRequest().parseRequest();
-				// std::cout << "before read\n";
 				iter->setRequestChecker(true);
 				iter->setStartIndex(pos + 4);
 				iter->setEndOfHeader(pos + 4);
 				_setReadEnd(iter);
-				// delete[] buff;
-				// if (iter->getRequest().getMethod() == "POST" || iter->getRequest().getMethod() == "PUT")
 			}
 			return 0;
 		}
 		catch(int code)
 		{
-			std::cout << "err code : " << code << std::endl;
 			iter->clearBuffer();
 			iter->clearChunkBuffer();
-			// delete[] buff;
 			return 1;
 		}
 	}
 	else
 	{
-		std::cout << "break!!\n";
+		std::cout << "SOCKET DISCONNECT: " << iter->getSocketFd() << std::endl;
 		_socketDisconnect(iter);
-		// delete[] buff;
 		return 1;
 	}
 }
 
 int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
 {
-	std::cout << "fd: " << iter->getSocketFd() << ": condition: " << FDManager::instance().getConditionBySocket(iter->getSocketFd()) << std::endl;
 	iter->setRequestChecker(false);
 	int condition = FDManager::instance().getConditionBySocket(iter->getSocketFd());
 	if (condition == NOT_SET)
 	{
+		std::cout << "RECV REQUEST: " << iter->getSocketFd() << std::endl;
+
 		Request request(iter->getBuffer());
 		request.parseRequest();
 
@@ -380,11 +366,14 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
 		if (ret == -1)
 		{
 			FDManager::instance().unsetFD(iter->getSocketFd(), true, true);
-			throw std::runtime_error("Response write error");
+			throw std::runtime_error("Response write FAIL");
 		}
+
 		iter->getResponse().setWrittenSize(writtenSize + ret);
 		if (iter->getResponse().getWrittenSize() == message.size())
 		{
+			std::cout << "SEND RESPONSE: " << iter->getSocketFd() << std::endl;
+
 			condition = NOT_SET;
 			FDManager::instance().setConditionBySocket(iter->getSocketFd(), NOT_SET);
 			iter->getResponse().setWrittenSize(0);

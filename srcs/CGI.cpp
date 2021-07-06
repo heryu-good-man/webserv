@@ -29,7 +29,7 @@ CGI&    CGI::operator=(const CGI& rhs)
 	{
 		if (_env != NULL)
 			_clearEnv();
-		// _env = rhs._env;
+		
 		if (rhs._env != NULL)
 		{
 			size_t i = 0;
@@ -101,16 +101,14 @@ void    CGI::execCGI(const Request& request, const Location& location, Response*
 
 	originfd[0] = dup(0);
 	originfd[1] = dup(1);
-	// int tmp_fd;
+	
 	pid_t pid = fork();
 	if (pid == 0)
 	{
 		close(fd[1]);
 		dup2(fd[0], 0);
 		close(fd[0]);
-		// std::cout << "before open\n";
 		int file_fd = open(path.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-		// std::cout << "after open\n";
 		dup2(file_fd, 1);
 		close(file_fd);
 		execve(location.getCGIPath().c_str(), NULL, _env);

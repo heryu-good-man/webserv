@@ -96,7 +96,6 @@ void	Response::response(const Server& server, const Request& request)
 	catch(int code)
 	{
 		_statusCode = code;
-		std::cout << code << std::endl;
 		_ret = _makeErrorResponse(server, request.getMethod());
 	}
 }
@@ -119,7 +118,6 @@ void	Response::_responseRedirect(const Location& location)
 
 void	Response::_responseWithCGI(const Location& location, const std::string& path, const Request& request)
 {
-	std::cout << "..cgi..." << std::endl;
 	if (FDManager::instance().getConditionBySocket(getSocketNum()) == NOT_SET)
 	{
 		_cgi.setEnv(request, path);
@@ -128,13 +126,11 @@ void	Response::_responseWithCGI(const Location& location, const std::string& pat
 	}
 	if (FDManager::instance().getConditionBySocket(getSocketNum()) == CGI_READ)
 	{
-		// waitpid(-1, NULL, 0);
 		waitpid(_cgi.getPID(), NULL, 0);
-		std::cout << "get or cgi_read" << std::endl;
 		_fd = open(_cgi.getPath().c_str(), O_RDONLY);
 		if (_fd == -1)
 		{
-			throw std::runtime_error("Response: cgi read open error");
+			throw std::runtime_error("Response: cgi read open FAIL");
 		}
 		FDManager::instance().addReadFileFD(_fd, this, true);
 	}
@@ -144,10 +140,6 @@ void	Response::_responseWithCGI(const Location& location, const std::string& pat
 		std::string fileContent = FDManager::instance().getResult(_socketNum);
 		size_t findCRLF = fileContent.find("\r\n\r\n");
 		size_t contentLength = fileContent.size() - (findCRLF + 4);
-
-		std::cout << "findCRLF: " << findCRLF << std::endl;
-		std::cout << "contentLength: " << contentLength << std::endl;
-
 		std::string startLine = "HTTP/1.1 200 OK\r\n";
 		std::string header = fileContent.substr(0, findCRLF);
 		_ret = "";
@@ -282,7 +274,7 @@ std::string		Response::_readFile(const std::string& fileName)
 		_fd = open(fileName.c_str(), O_RDONLY);
 		if (_fd == -1)
 		{
-			throw std::runtime_error("Response: read open error");
+			throw std::runtime_error("Response: read open FAIL");
 		}
 		FDManager::instance().addReadFileFD(_fd, this, false); // reading
 	}
@@ -304,8 +296,7 @@ void	Response::_writeFile(const std::string& fileName, const Request& req)
 			_fd = open(fileName.c_str(), O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
 		if (_fd == -1)
 		{
-			std::cout << "errno: " << errno << std::endl;
-			throw std::runtime_error("Response: write open error");
+			throw std::runtime_error("Response: write open FAIL");
 		}
 		FDManager::instance().addWriteFileFD(_fd, req.getBody(), this, false); // writing
 	}
@@ -360,9 +351,6 @@ void	Response::_writeHeaders(void)
 	_ret += "Content-Type: ";
 	_ret += _contentType;
 	_ret += "\r\n";
-
-	// Date
-
 	_ret += "\r\n";
 }
 
@@ -370,8 +358,6 @@ void	Response::_writeBody(void)
 {
 	_ret += _body;
 }
-
-
 
 void	Response::_isValidHTTPVersion(const std::string& httpVersion) const
 {
@@ -565,10 +551,7 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 	std::vector<std::string>::const_iterator endIter = indexPages.end();
 	DIR *originDir = opendir(dirPath.c_str());
 	if (originDir == NULL)
-	{
-		std::cout << "errno: " << errno << std::endl;
 		throw 500;
-	}
 	while (it != endIter)
 	{
 		DIR *pDir = originDir;

@@ -89,7 +89,6 @@ bool		Socket::getRequestChecker()
 	return (_requestChecker);
 }
 
-// ***** memberFunction ******
 void		Socket::addStringToBuff(char *addBuff)
 {
 	_buffer += addBuff;
@@ -104,12 +103,10 @@ void		Socket::clearBuffer()
 	_buffer.clear();
 }
 
-// ***** SETTER ******
 void		Socket::setReadChecker(bool b)
 {
 	_readChecker = b;
 }
-
 
 void		Socket::setBodyLen(int bodyLen)
 {
