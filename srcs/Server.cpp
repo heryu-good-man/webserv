@@ -1,43 +1,24 @@
 #include "Server.hpp"
 
-const std::string		DEFAULT_HOST = "localhost";
-const size_t			DEFAULT_PORT = 8080;
-const std::string		DEFAULT_SERVER_NAME = "localhost";
+const std::string DEFAULT_HOST = "localhost";
+const size_t DEFAULT_PORT = 8080;
+const std::string DEFAULT_SERVER_NAME = "localhost";
 
 Server::Server()
-	: _listenSocket()
-	, _sAddr()
-	, _cAddr()
-	, _sockets()
-	, _locations()
-	, _host(DEFAULT_HOST)
-	, _port(DEFAULT_PORT)
-	, _serverName(DEFAULT_SERVER_NAME)
-	, _errorPages()
+	: _listenSocket(), _sAddr(), _cAddr(), _sockets(), _locations(), _host(DEFAULT_HOST), _port(DEFAULT_PORT), _serverName(DEFAULT_SERVER_NAME), _errorPages()
 {
-
 }
 
-Server::Server(const Server& other)
-	: _listenSocket(other._listenSocket)
-	, _sAddr(other._sAddr)
-	, _cAddr(other._cAddr)
-	, _sockets(other._sockets)
-	, _locations(other._locations)
-	, _host(other._host)
-	, _port(other._port)
-	, _serverName(other._serverName)
-	, _errorPages(other._errorPages)
+Server::Server(const Server &other)
+	: _listenSocket(other._listenSocket), _sAddr(other._sAddr), _cAddr(other._cAddr), _sockets(other._sockets), _locations(other._locations), _host(other._host), _port(other._port), _serverName(other._serverName), _errorPages(other._errorPages)
 {
-
 }
 
 Server::~Server()
 {
-
 }
 
-Server& Server::operator=(const Server& rhs)
+Server &Server::operator=(const Server &rhs)
 {
 	if (this != &rhs)
 	{
@@ -54,7 +35,7 @@ Server& Server::operator=(const Server& rhs)
 	return (*this);
 }
 
-const Location&	Server::getLocation(size_t index) const
+const Location &Server::getLocation(size_t index) const
 {
 	if (0 <= index && index < _locations.size())
 		return (_locations[index]);
@@ -62,12 +43,12 @@ const Location&	Server::getLocation(size_t index) const
 		throw std::runtime_error("index error: out_of_index by getServer");
 }
 
-const std::vector<Location>&	Server::getLocations(void) const
+const std::vector<Location> &Server::getLocations(void) const
 {
 	return (_locations);
 }
 
-const std::string&				Server::getErrorPage(int code) const
+const std::string &Server::getErrorPage(int code) const
 {
 	static const std::string none = "";
 	std::map<std::string, std::string>::const_iterator it = _errorPages.find(std::to_string(code));
@@ -77,17 +58,17 @@ const std::string&				Server::getErrorPage(int code) const
 		return (none);
 }
 
-size_t							Server::getPort(void) const
+size_t Server::getPort(void) const
 {
 	return (_port);
 }
 
-const std::string&				Server::getHost(void) const
+const std::string &Server::getHost(void) const
 {
 	return (_host);
 }
 
-Server::Key	Server::_getKeyNumber(const std::string& key) const
+Server::Key Server::_getKeyNumber(const std::string &key) const
 {
 	if (key == "listen")
 		return (LISTEN);
@@ -99,7 +80,7 @@ Server::Key	Server::_getKeyNumber(const std::string& key) const
 		return (NONE);
 }
 
-void	Server::_setListen(const std::string& value)
+void Server::_setListen(const std::string &value)
 {
 	std::string tmpValue = value;
 	if (tmpValue.find(" ") != std::string::npos)
@@ -114,19 +95,19 @@ void	Server::_setListen(const std::string& value)
 	}
 }
 
-void	Server::_setServerName(const std::string& value)
+void Server::_setServerName(const std::string &value)
 {
 	_serverName = value;
 }
 
-void	Server::_setErrorPage(const std::string& value)
+void Server::_setErrorPage(const std::string &value)
 {
 	std::pair<std::string, std::string> p = splitString(value, " ");
 
 	_errorPages[p.first] = p.second;
 }
 
-void	Server::setAddress(void)
+void Server::setAddress(void)
 {
 	// listensocket 할당
 	// sAddr 초기화
@@ -136,38 +117,38 @@ void	Server::setAddress(void)
 	_sAddr.sin_port = htons(_port);
 }
 
-int	Server::getListenSocket() const
+int Server::getListenSocket() const
 {
 	return _listenSocket;
 }
 
-void	Server::setListenSocket()
+void Server::setListenSocket()
 {
 	_listenSocket = socket(PF_INET, SOCK_STREAM, 0);
 }
 
-int	Server::bindSelf()
+int Server::bindSelf()
 {
 	return bind(_listenSocket, (struct sockaddr *)&_sAddr, sizeof(_sAddr));
 }
 
-int	Server::listenSelf(int backLog)
+int Server::listenSelf(int backLog)
 {
 	return listen(_listenSocket, backLog);
 }
 
 // server의 accept를 진행하는 부분이다.
 // 새로 받은 socket을 리턴한다.
-void	Server::acceptSocket(void)
+void Server::acceptSocket(void)
 {
 	int len;
-	int tmpSock = accept(_listenSocket, (struct sockaddr *) &_cAddr, (socklen_t *)&len);
+	int tmpSock = accept(_listenSocket, (struct sockaddr *)&_cAddr, (socklen_t *)&len);
 	FDManager::instance().setFD(tmpSock, true, true);
 	_sockets.push_back(Socket(tmpSock));
 	std::cout << "ACCEPT SOCKET FD: " << tmpSock << std::endl;
 }
 
-void	Server::checkSet(fd_set *copyr, fd_set *copyw)
+void Server::checkSet(fd_set *copyr, fd_set *copyw)
 {
 	std::vector<Socket>::iterator iter = _sockets.begin();
 	for (; iter != _sockets.end(); iter++)
@@ -177,7 +158,7 @@ void	Server::checkSet(fd_set *copyr, fd_set *copyw)
 			if (_checkReadSetAndExit(iter))
 			{
 				_sockets.erase(iter--);
-				continue ;
+				continue;
 			}
 		}
 		else if (FD_ISSET(iter->getSocketFd(), copyw) && iter->getReadChecker() == true)
@@ -185,21 +166,21 @@ void	Server::checkSet(fd_set *copyr, fd_set *copyw)
 			if (_checkWriteSet(iter))
 			{
 				_sockets.erase(iter--);
-				continue ;
+				continue;
 			}
 		}
 	}
 }
 
 // priavate
-int	Server::_socketDisconnect(std::vector<Socket>::iterator& iter)
+int Server::_socketDisconnect(std::vector<Socket>::iterator &iter)
 {
 	// 소켓연결해제
 	FDManager::instance().unsetFD(iter->getSocketFd(), true, true);
 	return 1;
 }
 
-void	Server::_setReadEnd(std::vector<Socket>::iterator& iter)
+void Server::_setReadEnd(std::vector<Socket>::iterator &iter)
 {
 	std::string method = iter->getRequest().getStartLine()[0];
 	if (method == "POST" || method == "PUT")
@@ -260,24 +241,22 @@ void	Server::_setReadEnd(std::vector<Socket>::iterator& iter)
 					iter->setStartIndex(n + 4);
 					iter->clearChunkBuffer();
 					iter->setRequestChecker(false);
-					break ;
+					break;
 				}
 				else
-					break ;
+					break;
 			}
 		}
 	}
-	else if (method == "GET" || method == "DELETE" || method == "HEAD")
-		iter->setReadChecker(true);
 	else
-		throw 405;
+		iter->setReadChecker(true);
 }
 
-int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator& iter)
+int Server::_checkReadSetAndExit(std::vector<Socket>::iterator &iter)
 {
-	char	buff[MAXBUFF + 1];
-	int		n;
-	int		pos = 0;
+	char buff[MAXBUFF + 1];
+	int n;
+	int pos = 0;
 
 	if ((n = read(iter->getSocketFd(), buff, MAXBUFF)) != 0)
 	{
@@ -303,7 +282,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator& iter)
 			}
 			return 0;
 		}
-		catch(int code)
+		catch (int code)
 		{
 			iter->clearBuffer();
 			iter->clearChunkBuffer();
@@ -318,7 +297,7 @@ int	Server::_checkReadSetAndExit(std::vector<Socket>::iterator& iter)
 	}
 }
 
-int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
+int Server::_checkWriteSet(std::vector<Socket>::iterator &iter)
 {
 	iter->setRequestChecker(false);
 	int condition = FDManager::instance().getConditionBySocket(iter->getSocketFd());
@@ -350,14 +329,13 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
 		request.parseRequest();
 
 		iter->getResponse().response(*this, request);
-
 		condition = ENABLE_WRITE;
 		FDManager::instance().setConditionBySocket(iter->getSocketFd(), ENABLE_WRITE);
 	}
 	if (condition == ENABLE_WRITE)
 	{
 		// write
-		const std::string& message = iter->getResponse().getMessage();
+		const std::string &message = iter->getResponse().getMessage();
 		size_t writtenSize = iter->getResponse().getWrittenSize();
 		size_t restSize = message.size() - writtenSize;
 		size_t writeSize = restSize < 65530 ? restSize : 65530;
@@ -365,8 +343,8 @@ int		Server::_checkWriteSet(std::vector<Socket>::iterator& iter)
 		int ret = write(iter->getSocketFd(), message.c_str() + writtenSize, writeSize);
 		if (ret == -1)
 		{
-			FDManager::instance().unsetFD(iter->getSocketFd(), true, true);
-			throw std::runtime_error("Response write FAIL");
+			std::cout << "Response write FAIL" << std::endl;
+			return _socketDisconnect(iter);
 		}
 
 		iter->getResponse().setWrittenSize(writtenSize + ret);

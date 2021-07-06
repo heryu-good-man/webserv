@@ -1,17 +1,12 @@
 #ifndef RESPONSE_COMPILE
-# define RESPONSE_COMPILE
+#define RESPONSE_COMPILE
 #endif
 
 #include "Response.hpp"
 
 Response::Response(void)
-	: _ret()
-	, _body()
-	, _statusCode(200)
-	, _writtenSize(0)
-	, _socketNum(-1)
+	: _ret(), _body(), _statusCode(200), _writtenSize(0), _socketNum(-1)
 {
-
 }
 
 Response::Response(const Response &ref)
@@ -22,10 +17,9 @@ Response::Response(const Response &ref)
 
 Response::~Response(void)
 {
-
 }
 
-Response		&Response::operator=(const Response &ref)
+Response &Response::operator=(const Response &ref)
 {
 	if (this != &ref)
 	{
@@ -43,12 +37,11 @@ Response		&Response::operator=(const Response &ref)
 		_cgi = ref._cgi;
 		_writtenSize = ref._writtenSize;
 		_socketNum = ref._socketNum;
-
 	}
 	return *this;
 }
 
-const std::string& Response::getMessage(void) const
+const std::string &Response::getMessage(void) const
 {
 	return _ret;
 }
@@ -69,12 +62,15 @@ void Response::setSocketNum(int num)
 	_socketNum = num;
 }
 
-void	Response::response(const Server& server, const Request& request)
+void Response::response(const Server &server, const Request &request)
 {
 	try
 	{
-		_ret = "";
-		_statusCode = 200;
+		if (FDManager::instance().getConditionBySocket(getSocketNum()) == NOT_SET)
+		{
+			_ret = "";
+			_statusCode = 200;
+		}
 		_isValidHTTPVersion(request.getHTTPVersion());
 		_location = _getMatchingLocation(server, request.getURI());
 		_requestMethod = _isAllowedMethod(_location, request.getMethod());
@@ -93,16 +89,16 @@ void	Response::response(const Server& server, const Request& request)
 		else if (_requestMethod == "PUT" || _requestMethod == "POST")
 			_responsePUTorPOST(_location, _path, request);
 	}
-	catch(int code)
+	catch (int code)
 	{
 		_statusCode = code;
 		_ret = _makeErrorResponse(server, request.getMethod());
 	}
 }
 
-void	Response::_responseRedirect(const Location& location)
+void Response::_responseRedirect(const Location &location)
 {
-	const std::string& value = location.getReturn();
+	const std::string &value = location.getReturn();
 	std::pair<std::string, std::string> p = splitString(value, " ");
 	if (p.first == "301")
 	{
@@ -116,7 +112,7 @@ void	Response::_responseRedirect(const Location& location)
 		throw 500;
 }
 
-void	Response::_responseWithCGI(const Location& location, const std::string& path, const Request& request)
+void Response::_responseWithCGI(const Location &location, const std::string &path, const Request &request)
 {
 	if (FDManager::instance().getConditionBySocket(getSocketNum()) == NOT_SET)
 	{
@@ -130,7 +126,7 @@ void	Response::_responseWithCGI(const Location& location, const std::string& pat
 		_fd = open(_cgi.getPath().c_str(), O_RDONLY);
 		if (_fd == -1)
 		{
-			throw std::runtime_error("Response: cgi read open FAIL");
+			std::runtime_error("Response: cgi read open FAIL");
 		}
 		FDManager::instance().addReadFileFD(_fd, this, true);
 	}
@@ -138,10 +134,28 @@ void	Response::_responseWithCGI(const Location& location, const std::string& pat
 	{
 		remove(_cgi.getPath().c_str());
 		std::string fileContent = FDManager::instance().getResult(_socketNum);
+
+		// find
+		std::string statusString = fileContent.substr(0, fileContent.find("\r\n"));
+		int cgiStatus = 200;
+		if (statusString.find("Status") != std::string::npos)
+		{
+			cgiStatus = atoi(statusString.substr(8, 3).c_str());
+		}
+		// find
+
+		// std::string startLine = "HTTP/1.1 200 OK\r\n";
+		std::string startLine = "HTTP/1.1 " + std::to_string(cgiStatus) + " ";
+		_setStatusMap();
+		std::map<int, std::string> *StatusMap = _getStatusMap();
+		startLine += (*StatusMap)[cgiStatus];
+		startLine += "\r\n";
+		_unsetStatusMap();
+
 		size_t findCRLF = fileContent.find("\r\n\r\n");
 		size_t contentLength = fileContent.size() - (findCRLF + 4);
-		std::string startLine = "HTTP/1.1 200 OK\r\n";
 		std::string header = fileContent.substr(0, findCRLF);
+
 		_ret = "";
 		_ret += startLine;
 		_ret += header;
@@ -152,14 +166,14 @@ void	Response::_responseWithCGI(const Location& location, const std::string& pat
 	}
 }
 
-void	Response::_responseGET(const Location& location, const std::string& realPath, const Request& request, bool isGET)
+void Response::_responseGET(const Location &location, const std::string &realPath, const Request &request, bool isGET)
 {
 	_type = _getType(realPath);
 	if (_type == TYPE_FILE)
 		_setBodyFromFile(realPath);
 	else if (_type == TYPE_DIR)
 		_setBodyFromDir(realPath, location, request);
-	else	// not found
+	else // not found
 		throw 404;
 	_writeStartLine();
 	_writeHeaders();
@@ -167,7 +181,7 @@ void	Response::_responseGET(const Location& location, const std::string& realPat
 		_writeBody();
 }
 
-void	Response::_responsePUTorPOST(const Location& location, const std::string& path, const Request& request)
+void Response::_responsePUTorPOST(const Location &location, const std::string &path, const Request &request)
 {
 	if (request.getBody().size() > location.getClientBodySize())
 		throw 413;
@@ -177,7 +191,7 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 	int type = _getType(path);
 	if (type == TYPE_DIR) // dir
 	{
-		const std::vector<std::string>& indexPages = location.getIndexPages();
+		const std::vector<std::string> &indexPages = location.getIndexPages();
 		if (indexPages.size() == 0)
 			throw 500;
 		else
@@ -186,7 +200,9 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 			if (tmpPath.back() != '/')
 				tmpPath += "/";
 			if (_getType(tmpPath + indexPages[0]) == TYPE_NONE) // if there is no file, make new file
+			{
 				_statusCode = 201;
+			}
 			_writeFile(tmpPath + indexPages[0], request);
 		}
 	}
@@ -197,7 +213,7 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 		if (path.back() == '/')
 			throw 500;
 		std::string previousPath = path.substr(0, path.rfind("/"));
-		if (_getType(previousPath) == TYPE_DIR)  // if there is directory, make new file
+		if (_getType(previousPath) == TYPE_DIR) // if there is directory, make new file
 		{
 			_statusCode = 201;
 			_writeFile(path, request);
@@ -215,7 +231,7 @@ void	Response::_responsePUTorPOST(const Location& location, const std::string& p
 	_writeBody();
 }
 
-void Response::_responseDELETE(const Location& location, const std::string& path)
+void Response::_responseDELETE(const Location &location, const std::string &path)
 {
 	int type = _getType(path);
 	if (type == TYPE_DIR)
@@ -240,11 +256,11 @@ void Response::_responseDELETE(const Location& location, const std::string& path
 	_writeBody();
 }
 
-std::string	Response::_makeErrorResponse(const Server& server, const std::string& method)
+std::string Response::_makeErrorResponse(const Server &server, const std::string &method)
 {
 	_setStatusMap();
 
-	std::map<int, std::string>* StatusMap = _getStatusMap();
+	std::map<int, std::string> *StatusMap = _getStatusMap();
 	std::string statusText = StatusMap->find(_statusCode)->second;
 	std::string status = std::to_string(_statusCode) + " " + statusText;
 	std::string body;
@@ -267,14 +283,15 @@ std::string	Response::_makeErrorResponse(const Server& server, const std::string
 	return (ret);
 }
 
-std::string		Response::_readFile(const std::string& fileName)
+std::string Response::_readFile(const std::string &fileName)
 {
 	if (FDManager::instance().getConditionBySocket(getSocketNum()) == NOT_SET)
 	{
 		_fd = open(fileName.c_str(), O_RDONLY);
 		if (_fd == -1)
 		{
-			throw std::runtime_error("Response: read open FAIL");
+			std::cout << "Response: read open FAIL" << std::endl;
+			throw 500;
 		}
 		FDManager::instance().addReadFileFD(_fd, this, false); // reading
 	}
@@ -285,18 +302,19 @@ std::string		Response::_readFile(const std::string& fileName)
 	return (std::string(""));
 }
 
-void	Response::_writeFile(const std::string& fileName, const Request& req)
+void Response::_writeFile(const std::string &fileName, const Request &req)
 {
 	if (FDManager::instance().getConditionBySocket(getSocketNum()) == NOT_SET)
 	{
-		const std::string& method = req.getMethod();
+		const std::string &method = req.getMethod();
 		if (method == "PUT")
 			_fd = open(fileName.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 		else if (method == "POST")
 			_fd = open(fileName.c_str(), O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
 		if (_fd == -1)
 		{
-			throw std::runtime_error("Response: write open FAIL");
+			std::cout << "Response: write open FAIL" << std::endl;
+			throw 500;
 		}
 		FDManager::instance().addWriteFileFD(_fd, req.getBody(), this, false); // writing
 	}
@@ -306,7 +324,7 @@ void	Response::_writeFile(const std::string& fileName, const Request& req)
 	}
 }
 
-bool	Response::_isCGIRequest(const Location& location, const std::string& CGIExtension, std::string& path)
+bool Response::_isCGIRequest(const Location &location, const std::string &CGIExtension, std::string &path)
 {
 	if (_getType(path) == TYPE_DIR)
 	{
@@ -327,7 +345,7 @@ bool	Response::_isCGIRequest(const Location& location, const std::string& CGIExt
 	return false;
 }
 
-void	Response::_writeStartLine(void)
+void Response::_writeStartLine(void)
 {
 	_ret = "";
 	_ret += "HTTP/1.1 ";
@@ -337,7 +355,7 @@ void	Response::_writeStartLine(void)
 		_ret += "201 Create\r\n";
 }
 
-void	Response::_writeHeaders(void)
+void Response::_writeHeaders(void)
 {
 	// Server
 	_ret += "Server: webserv\r\n";
@@ -354,12 +372,12 @@ void	Response::_writeHeaders(void)
 	_ret += "\r\n";
 }
 
-void	Response::_writeBody(void)
+void Response::_writeBody(void)
 {
 	_ret += _body;
 }
 
-void	Response::_isValidHTTPVersion(const std::string& httpVersion) const
+void Response::_isValidHTTPVersion(const std::string &httpVersion) const
 {
 	if (httpVersion != "HTTP/1.1")
 		throw 505;
@@ -369,7 +387,7 @@ void	Response::_isValidHTTPVersion(const std::string& httpVersion) const
 ** 해당 location에서 허용되는 methods 인지 파악
 ** 기본값은 모두 허용임
 */
-std::string Response::_isAllowedMethod(const Location& location, const std::string& requestMethod) const
+std::string Response::_isAllowedMethod(const Location &location, const std::string &requestMethod) const
 {
 	if (requestMethod != "GET" && requestMethod != "HEAD" &&
 		requestMethod != "POST" && requestMethod != "PUT" && requestMethod != "DELETE")
@@ -380,7 +398,7 @@ std::string Response::_isAllowedMethod(const Location& location, const std::stri
 	while (i < methodSize)
 	{
 		if (requestMethod == allowedMethods[i])
-			break ;
+			break;
 		++i;
 	}
 	if (i == allowedMethods.size())
@@ -394,9 +412,9 @@ std::string Response::_isAllowedMethod(const Location& location, const std::stri
 ** uri /a/ 인 경우 -> /a/부터 찾고, 없으면 location /a 매칭임
 ** uri /a  인 경우 -> /a/를 찾지 못함, /a은 당연히 매칭임
 */
-Location	Response::_getMatchingLocation(const Server& server, const std::string& uri) const
+Location Response::_getMatchingLocation(const Server &server, const std::string &uri) const
 {
-	const std::vector<Location>& locations = server.getLocations();
+	const std::vector<Location> &locations = server.getLocations();
 	size_t locationSize = locations.size();
 	size_t samePathSize = 0;
 	size_t searchIndex = 0;
@@ -426,23 +444,23 @@ Location	Response::_getMatchingLocation(const Server& server, const std::string&
 ** location root가 /var/www이고 path가 /a/b일 때
 ** uri가 /a/b/c 라면 -> /var/www/c 를 반환하게 함
 */
-std::string	Response::_getRealPath(const Location& location, const std::string& uri) const
+std::string Response::_getRealPath(const Location &location, const std::string &uri) const
 {
 	std::string realPath = uri;
 	const std::string locationPath = location.getPath();
 	const std::string rootDir = location.getRoot();
-	if (locationPath.back() == '/')		// location /a/b/ 같은 경우
+	if (locationPath.back() == '/') // location /a/b/ 같은 경우
 	{
-		if (rootDir.back() == '/')	// root /var/www/ 일 때
+		if (rootDir.back() == '/') // root /var/www/ 일 때
 			realPath.replace(0, locationPath.size(), rootDir);
-		else						// root /var/www 일 때
+		else // root /var/www 일 때
 			realPath.replace(0, locationPath.size() - 1, rootDir);
 	}
-	else 								// location /a/b 같은 경우
+	else // location /a/b 같은 경우
 	{
-		if (rootDir.back() == '/')	// root /var/www/ 일 때
+		if (rootDir.back() == '/') // root /var/www/ 일 때
 			realPath.replace(0, locationPath.size(), rootDir.substr(0, rootDir.size() - 1));
-		else						// root /var/www 일 때
+		else // root /var/www 일 때
 			realPath.replace(0, locationPath.size(), rootDir);
 	}
 	return (realPath);
@@ -452,7 +470,7 @@ std::string	Response::_getRealPath(const Location& location, const std::string& 
 ** stat으로 FILE인지 DIR인지 파악함
 ** stat을 실패하는 건 -> 경로를 찾을 수 없는 것 -> 404
 */
-int		Response::_getType(const std::string& realPath) const
+int Response::_getType(const std::string &realPath) const
 {
 	struct stat statBuf;
 	if (stat(realPath.c_str(), &statBuf) == -1)
@@ -463,7 +481,7 @@ int		Response::_getType(const std::string& realPath) const
 		return (TYPE_FILE);
 }
 
-int		Response::_getTypeMIME(const std::string& fileName) const
+int Response::_getTypeMIME(const std::string &fileName) const
 {
 	size_t findExtension = fileName.rfind(".");
 	if (findExtension == std::string::npos)
@@ -476,7 +494,7 @@ int		Response::_getTypeMIME(const std::string& fileName) const
 		return (TEXT);
 }
 
-void    Response::_setBodyFromFile(const std::string& fileName)
+void Response::_setBodyFromFile(const std::string &fileName)
 {
 	if (_getTypeMIME(fileName) == HTML)
 		_contentType = "text/html";
@@ -486,7 +504,7 @@ void    Response::_setBodyFromFile(const std::string& fileName)
 	_body = _readFile(fileName);
 }
 
-void	Response::_setBodyFromDir(const std::string& path, const Location& location, const Request& request)
+void Response::_setBodyFromDir(const std::string &path, const Location &location, const Request &request)
 {
 	std::string dirPath = path;
 	if (dirPath.back() != '/')
@@ -505,13 +523,13 @@ void	Response::_setBodyFromDir(const std::string& path, const Location& location
 	throw 404;
 }
 
-void Response::_setBodyFromAutoIndex(const Request& request, const std::string& dirPath)
+void Response::_setBodyFromAutoIndex(const Request &request, const std::string &dirPath)
 {
 	std::string requestURI = request.getURI();
 	if (requestURI.back() != '/')
 		requestURI += "/";
 	std::string former =
-	"<html>\n<head><title>Index of /</title></head>\n<body bgcolor=\"white\">\n<h1>Index of /</h1>\n<hr><pre>\n";
+		"<html>\n<head><title>Index of /</title></head>\n<body bgcolor=\"white\">\n<h1>Index of /</h1>\n<hr><pre>\n";
 	std::string latter = "</pre><hr></body>\n</html>";
 	std::string prefix = "<a href=\"";
 	std::string suffix = "</a>\n";
@@ -531,7 +549,7 @@ void Response::_setBodyFromAutoIndex(const Request& request, const std::string& 
 		oss << "\">";
 		oss << dir_ent->d_name;
 		if (dir_ent->d_type == DT_DIR)
-			oss <<  "/";
+			oss << "/";
 		oss << suffix;
 	}
 	closedir(pDir);
@@ -541,7 +559,7 @@ void Response::_setBodyFromAutoIndex(const Request& request, const std::string& 
 	_contentType = "text/html";
 }
 
-std::string Response::_getIndexPage(const std::string& path, const Location& location)
+std::string Response::_getIndexPage(const std::string &path, const Location &location)
 {
 	std::string dirPath = path;
 	if (dirPath.back() != '/')
@@ -562,11 +580,11 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 			if (dirEnt->d_name == *it)
 			{
 				found = true;
-				break ;
+				break;
 			}
 		}
 		if (found)
-			break ;
+			break;
 		++it;
 	}
 	closedir(originDir);
@@ -576,17 +594,17 @@ std::string Response::_getIndexPage(const std::string& path, const Location& loc
 		return (std::string());
 }
 
-std::map<int, std::string>* Response::_getStatusMap(void)
+std::map<int, std::string> *Response::_getStatusMap(void)
 {
 	return _statusMap;
 }
 
-const CGI& Response::_getCGI(void) const
+const CGI &Response::_getCGI(void) const
 {
 	return (_cgi);
 }
 
-void		Response::_setStatusMap(void)
+void Response::_setStatusMap(void)
 {
 	_statusMap = new std::map<int, std::string>;
 	_statusMap->insert(std::pair<int, std::string>(200, "OK"));
@@ -603,7 +621,7 @@ void		Response::_setStatusMap(void)
 	_statusMap->insert(std::pair<int, std::string>(503, "Service Unavailable"));
 	_statusMap->insert(std::pair<int, std::string>(505, "HTTP Version Not Supported"));
 }
-void		Response::_unsetStatusMap(void)
+void Response::_unsetStatusMap(void)
 {
 	_statusMap->clear();
 	delete _statusMap;
