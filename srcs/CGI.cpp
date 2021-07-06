@@ -20,7 +20,10 @@ CGI::CGI(const CGI& other)
 
 CGI::~CGI()
 {
-
+	if (_env != NULL)
+	{
+		_clearEnv();
+	}
 }
 
 CGI&    CGI::operator=(const CGI& rhs)
