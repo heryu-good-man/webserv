@@ -3,21 +3,18 @@
 Config::Config()
 	: _servers()
 {
-
 }
 
-Config::Config(const Config& other)
+Config::Config(const Config &other)
 	: _servers(other._servers)
 {
-
 }
 
 Config::~Config()
 {
-
 }
 
-Config&	Config::operator=(const Config& rhs)
+Config &Config::operator=(const Config &rhs)
 {
 	if (this != &rhs)
 	{
@@ -26,7 +23,7 @@ Config&	Config::operator=(const Config& rhs)
 	return (*this);
 }
 
-Server	Config::getServer(size_t index) const
+Server Config::getServer(size_t index) const
 {
 	if (0 <= index && index < _servers.size())
 		return (_servers[index]);
@@ -34,7 +31,7 @@ Server	Config::getServer(size_t index) const
 		throw std::runtime_error("index error: out_of_index by getServer");
 }
 
-std::vector<Server>	Config::getServers(void) const
+std::vector<Server> Config::getServers(void) const
 {
 	return (_servers);
 }
@@ -43,7 +40,7 @@ std::vector<Server>	Config::getServers(void) const
 ** config 파일을 파싱함
 ** config -> Server -> Location
 */
-void	Config::parseConfig(const char* fileName)
+void Config::parseConfig(const char *fileName)
 {
 	std::string fileContent = _getFileContent(fileName);
 
@@ -53,7 +50,7 @@ void	Config::parseConfig(const char* fileName)
 		while (isSpace(fileContent[i])) // skip space
 			i++;
 		if (!fileContent[i]) // break condition
-			break ;
+			break;
 		if (fileContent.compare(i, SERVER_STR_LENGTH, "server") == 0)
 		{
 			size_t serverContentSize = _getServerContentSize(fileContent, i);
@@ -77,7 +74,7 @@ void	Config::parseConfig(const char* fileName)
 ** content로 location {...}이 들어올 때,
 ** content로 key value;가 들어올 때로 크게 나눔
 */
-Server	Config::_parseServer(const std::string& content)
+Server Config::_parseServer(const std::string &content)
 {
 	Server newServer;
 
@@ -92,10 +89,10 @@ Server	Config::_parseServer(const std::string& content)
 	size_t curPos = i + 1;
 	while (1)
 	{
-		while(isSpace(content[curPos])) // skip space
+		while (isSpace(content[curPos])) // skip space
 			curPos++;
 		if (!content[curPos] || content[curPos] == '}') // break condition
-			break ;
+			break;
 
 		if (content.compare(curPos, LOCATION_STR_LENGTH, "location") == 0) // if location / {...}
 		{
@@ -127,13 +124,13 @@ Server	Config::_parseServer(const std::string& content)
 			{
 			case Server::LISTEN:
 				newServer._setListen(value);
-				break ;
+				break;
 			case Server::SERVER_NAME:
 				newServer._setServerName(value);
-				break ;
+				break;
 			case Server::ERROR_PAGE:
 				newServer._setErrorPage(value);
-				break ;
+				break;
 			default:
 				throw std::runtime_error("config error: invalid Server's key");
 			}
@@ -147,20 +144,20 @@ Server	Config::_parseServer(const std::string& content)
 ** location {...}을 파싱함
 ** key value;에만 신경씀
 */
-Location	Config::_parseLocation(const std::string& content)
+Location Config::_parseLocation(const std::string &content)
 {
 	Location newLocation;
 	// set location Path
 	newLocation._path = _getLocationPath(content);
 
 	// set location value
-	size_t	curPos = content.find("{") + 1;
+	size_t curPos = content.find("{") + 1;
 	while (1)
 	{
 		while (isSpace(content[curPos]))
 			curPos++;
 		if (!content[curPos] || content[curPos] == '}')
-			break ;
+			break;
 
 		size_t endPos = content.find(";", curPos); // key value ";"
 		if (endPos == std::string::npos)
@@ -184,7 +181,7 @@ Location	Config::_parseLocation(const std::string& content)
 /*
 ** 파일내용을 한 줄씩 읽어와서 주석과 양옆 공백을 제거한 후 합쳐서 string으로 리턴
 */
-std::string	Config::_getFileContent(const char* fileName) const
+std::string Config::_getFileContent(const char *fileName) const
 {
 	std::ifstream ifs;
 	ifs.open(fileName, std::ios_base::in);
@@ -199,12 +196,12 @@ std::string	Config::_getFileContent(const char* fileName) const
 		if (ifs.fail())
 		{
 			ifs.clear();
-			break ;
+			break;
 		}
-		deleteComments(fileLine);			// 주석 제거
-		removeContinuousSpace(fileLine);	// 공백은 무조건 1개로
-		trimSpace(fileLine);				// 양쪽 공백 제거
-		if (fileLine != "")					// 빈문자열 아니면 넣기
+		deleteComments(fileLine);		 // 주석 제거
+		removeContinuousSpace(fileLine); // 공백은 무조건 1개로
+		trimSpace(fileLine);			 // 양쪽 공백 제거
+		if (fileLine != "")				 // 빈문자열 아니면 넣기
 			oss << fileLine << " ";
 	}
 	ifs.close();
@@ -214,7 +211,7 @@ std::string	Config::_getFileContent(const char* fileName) const
 /*
 ** server {}에서 길이를 구함
 */
-size_t	Config::_getServerContentSize(const std::string& content, size_t startIndex) const
+size_t Config::_getServerContentSize(const std::string &content, size_t startIndex) const
 {
 	size_t serverContentSize = SIZE_T_MAX;
 	size_t contentSize = content.size();
@@ -222,18 +219,18 @@ size_t	Config::_getServerContentSize(const std::string& content, size_t startInd
 	for (size_t i = startIndex; i < contentSize; ++i)
 	{
 		if (content[i] == '{')
-			parenthesesChecker.push(true);					// 여는 괄호면 푸쉬 해놓기
-		else if (content[i] == '}')							// 닫는 괄호일 때 판단하기
+			parenthesesChecker.push(true); // 여는 괄호면 푸쉬 해놓기
+		else if (content[i] == '}')		   // 닫는 괄호일 때 판단하기
 		{
-			if (parenthesesChecker.empty())					// 닫는 괄호인데 쌍에 맞는 괄호가 없다면
-				break ;
+			if (parenthesesChecker.empty()) // 닫는 괄호인데 쌍에 맞는 괄호가 없다면
+				break;
 			else
 			{
-				parenthesesChecker.pop();					// 비어있지는 않음
-				if (parenthesesChecker.empty())				// 닫는 괄호가 짝이 맞았다면
+				parenthesesChecker.pop();		// 비어있지는 않음
+				if (parenthesesChecker.empty()) // 닫는 괄호가 짝이 맞았다면
 				{
 					serverContentSize = i - startIndex + 1; // server {} 닫힌 것
-					break ;
+					break;
 				}
 			}
 		}
@@ -249,7 +246,7 @@ size_t	Config::_getServerContentSize(const std::string& content, size_t startInd
 ** location의 path를 리턴
 ** 중간에 invalid하면 예외던지기
 */
-std::string	Config::_getLocationPath(const std::string& content) const
+std::string Config::_getLocationPath(const std::string &content) const
 {
 	if (!isSpace(content[LOCATION_STR_LENGTH])) // location123 {...} 식으로 들어온 경우
 		throw std::runtime_error("config error: don't \"location@!#@!#\"");
@@ -272,7 +269,7 @@ std::string	Config::_getLocationPath(const std::string& content) const
 	return (locationPath);
 }
 
-bool	Config::_isValidConfig(void) const
+bool Config::_isValidConfig(void) const
 {
 	// No server
 	size_t serverCount = _servers.size();
@@ -285,20 +282,20 @@ bool	Config::_isValidConfig(void) const
 	std::map<std::string, int> nameChecker;
 	for (size_t i = 0; i < serverCount; ++i)
 	{
-		if (portChecker[_servers[i]._port] == 0)		// port 중복
+		if (portChecker[_servers[i]._port] == 0) // port 중복
 			portChecker[_servers[i]._port] = 1;
 		else
 			return (false);
 
-		// if (hostChecker[_servers[i]._host] == 0)		// host 중복
-		// 	hostChecker[_servers[i]._host] = 1;
-		// else
-		// 	return (false);
+		if (hostChecker[_servers[i]._host] == 0) // host 중복
+			hostChecker[_servers[i]._host] = 1;
+		else
+			return (false);
 
-		// if (nameChecker[_servers[i]._serverName] == 0)	// server name 중복
-		// 	nameChecker[_servers[i]._serverName] = 1;
-		// else
-		// 	return (false);
+		if (nameChecker[_servers[i]._serverName] == 0) // server name 중복
+			nameChecker[_servers[i]._serverName] = 1;
+		else
+			return (false);
 
 		// No Location
 		size_t locationCount = _servers[i]._locations.size();
