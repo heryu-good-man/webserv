@@ -316,6 +316,8 @@ void Response::_writeFile(const std::string &fileName, const Request &req)
 			std::cout << "Response: write open FAIL" << std::endl;
 			throw 500;
 		}
+		if (method == "POST")
+			lseek(_fd, 0, SEEK_END);
 		FDManager::instance().addWriteFileFD(_fd, req.getBody(), this, false); // writing
 	}
 	else if (FDManager::instance().getConditionBySocket(getSocketNum()) == SET)
