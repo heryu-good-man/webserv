@@ -7,10 +7,10 @@
 #include "FDManager.hpp"
 #include "Server.hpp"
 
-void	handleSignal(int signal)
+void handleSignal(int signal)
 {
 	std::cout << "\nSERVER OFF" << std::endl;
-	
+
 	close(0);
 	close(1);
 	close(2);
@@ -26,7 +26,7 @@ void	handleSignal(int signal)
 	exit(signal);
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
 	if (argc != 2)
 	{
@@ -40,7 +40,7 @@ int main(int argc, char** argv)
 	{
 		conf.parseConfig(argv[1]);
 	}
-	catch(const std::exception& e)
+	catch (const std::exception &e)
 	{
 		std::cout << e.what() << std::endl;
 		return (1);
@@ -81,10 +81,10 @@ int main(int argc, char** argv)
 		{
 			std::cout << "SELECT FAIL" << std::endl;
 			FDManager::instance().clearFD();
-			exit (1);
+			exit(1);
 		}
 
-		try 
+		try
 		{
 			for (std::vector<Server>::iterator iter = servers.begin(); iter != servers.end(); iter++)
 			{
@@ -95,7 +95,7 @@ int main(int argc, char** argv)
 			}
 
 			for (std::vector<int>::const_iterator iter = FDManager::instance().getReadFileFDs().begin();
-					iter != FDManager::instance().getReadFileFDs().end(); )
+				 iter != FDManager::instance().getReadFileFDs().end();)
 			{
 				if (FD_ISSET(*iter, &copyRead))
 				{
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 						throw std::runtime_error("FDManager::readFile FAIL");
 					else if (ret == MORE)
 						++iter;
-					else  // success
+					else // success
 						;
 				}
 				else
@@ -112,7 +112,7 @@ int main(int argc, char** argv)
 			}
 
 			for (std::vector<int>::const_iterator iter = FDManager::instance().getWriteFileFDs().begin();
-					iter != FDManager::instance().getWriteFileFDs().end(); )
+				 iter != FDManager::instance().getWriteFileFDs().end();)
 			{
 				if (FD_ISSET(*iter, &copyWrite))
 				{
@@ -121,14 +121,14 @@ int main(int argc, char** argv)
 						throw std::runtime_error("FDManager::writeFile FAIL");
 					else if (ret == MORE)
 						++iter;
-					else  // success
+					else // success
 						;
 				}
 				else
 					++iter;
 			}
 		}
-		catch (const std::exception& e)
+		catch (const std::exception &e)
 		{
 			std::cout << e.what() << std::endl;
 		}

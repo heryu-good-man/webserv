@@ -111,7 +111,7 @@ void CGI::execCGI(const Request &request, const Location &location, Response *re
 		int file_fd = open(path.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 		if (file_fd == -1)
 		{
-			std::runtime_error("Response: cgi child open FAIL");
+			throw std::runtime_error("Response: cgi child open FAIL");
 		}
 		dup2(file_fd, 1);
 		close(file_fd);

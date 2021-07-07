@@ -126,7 +126,7 @@ void Response::_responseWithCGI(const Location &location, const std::string &pat
 		_fd = open(_cgi.getPath().c_str(), O_RDONLY);
 		if (_fd == -1)
 		{
-			std::runtime_error("Response: cgi read open FAIL");
+			throw std::runtime_error("Response: cgi read open FAIL");
 		}
 		FDManager::instance().addReadFileFD(_fd, this, true);
 	}
