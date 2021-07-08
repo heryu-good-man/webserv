@@ -31,10 +31,4 @@
 *.out
 *.app
 
-# configfile except template
-*.conf
-!template.conf
-!template2.conf
 
-
-tmp.txt

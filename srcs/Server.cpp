@@ -143,9 +143,12 @@ void Server::acceptSocket(void)
 {
 	int len;
 	int tmpSock = accept(_listenSocket, (struct sockaddr *)&_cAddr, (socklen_t *)&len);
-	FDManager::instance().setFD(tmpSock, true, true);
-	_sockets.push_back(Socket(tmpSock));
-	std::cout << "ACCEPT SOCKET FD: " << tmpSock << std::endl;
+	if (tmpSock != -1)
+	{
+		FDManager::instance().setFD(tmpSock, true, true);
+		_sockets.push_back(Socket(tmpSock));
+		std::cout << "ACCEPT SOCKET FD: " << tmpSock << std::endl;
+	}
 }
 
 void Server::checkSet(fd_set *copyr, fd_set *copyw)
