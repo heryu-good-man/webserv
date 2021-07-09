@@ -266,7 +266,16 @@ std::string Response::_makeErrorResponse(const Server &server, const std::string
 	std::string body;
 	const std::string errorPagePath = server.getErrorPage(_statusCode);
 	if (!errorPagePath.empty() && _getType(errorPagePath) == TYPE_FILE)
-		body = _readFile(errorPagePath);
+	{
+		try 
+		{
+			body = _readFile(errorPagePath);
+		}
+		catch (int code)
+		{
+			body = status;
+		}
+	}
 	else
 		body = status;
 
