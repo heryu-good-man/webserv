@@ -197,7 +197,6 @@ void Server::_setReadEnd(std::vector<Socket>::iterator &iter)
 		// content-length 확인
 		else if (lenIter != reqEnd)
 		{
-			char buff[MAXBUFF + 1];
 			std::stringstream contentSize(lenIter->second);
 			contentSize >> n;
 			if (contentSize.fail())
@@ -208,16 +207,7 @@ void Server::_setReadEnd(std::vector<Socket>::iterator &iter)
 				iter->setReadChecker(true);
 				iter->setRequestChecker(false);
 			}
-			else if ((n = read(iter->getSocketFd(), buff, MAXBUFF)) != 0)
-			{
-				buff[n] = '\0';
-				iter->addStringToBuff(buff);
-				if (iter->getBuffer().size() - (iter->getStartIndex()) <= static_cast<size_t>(iter->getBodyLen()))
-				{
-					iter->setReadChecker(true);
-					iter->setRequestChecker(false);
-				}
-			}
+			std::cout << "123123123" << std::endl;
 		}
 		else if (encodingIter != reqEnd)
 		{
